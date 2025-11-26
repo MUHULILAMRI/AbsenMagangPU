@@ -15,8 +15,8 @@ export async function GET() {
 
     return NextResponse.json(users);
   } catch (err) {
+    console.error('Full API GET Error:', JSON.stringify(err, null, 2));
     const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred';
-    console.error('API GET Error:', errorMessage);
     return new NextResponse(JSON.stringify({ error: 'Internal Server Error', details: errorMessage }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },

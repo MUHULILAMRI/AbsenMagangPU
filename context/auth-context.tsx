@@ -29,40 +29,98 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const savedUser = localStorage.getItem("currentUser")
-    if (savedUser) {
-      setUser(JSON.parse(savedUser))
-    }
-    setLoading(false)
-  }, [])
+    const getSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        const { data: userProfile } = await supabase
+          .from('users')
+          .select('*')
+          .eq('id', session.user.id)
+          .single();
+        
+        if (userProfile) {
+          setUser({
+            ...session.user,
+            ...userProfile,
+          });
+        }
+      }
+      setLoading(false);
+    };
+
+    getSession();
+
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (session) {
+        const { data: userProfile } = await supabase
+          .from('users')
+          .select('*')
+          .eq('id', session.user.id)
+          .single();
+        
+        if (userProfile) {
+          setUser({
+            ...session.user,
+            ...userProfile,
+          });
+        }
+      } else {
+        setUser(null);
+      }
+      setLoading(false);
+    });
+
+    return () => {
+      authListener?.subscription.unsubscribe();
+    };
+  }, []);
+
+  import { supabase } from "@/lib/supabaseClient"
+
+// ... (existing User interface) ...
+
+const AuthContext = createContext<AuthContextType | undefined>(undefined)
+
+export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const [user, setUser] = useState<User | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  // ... (useEffect for session management will be updated later) ...
 
   const login = async (email: string, password: string) => {
-    const users = JSON.parse(localStorage.getItem("users") || "[]")
-    const foundUser = users.find((u: any) => u.email === email && u.password === password)
+    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    if (error) {
+      throw error
+    }
+    // The user will be set by onAuthStateChange listener
+  }
 
-    if (!foundUser) {
-      throw new Error("Email atau password salah")
+  const logout = async () => {
+    await supabase.auth.signOut()
+    setUser(null)
+  }
+
+
+  const updateUserPhoto = async (userId: string, photo: string) => {
+    // Update the photo URL in the Supabase 'users' table
+    const { data: updatedUser, error } = await supabase
+      .from('users')
+      .update({ photo })
+      .eq('id', userId)
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Error updating user photo:", error);
+      return;
     }
 
-    const { password: _, ...userWithoutPassword } = foundUser
-    setUser(userWithoutPassword)
-    localStorage.setItem("currentUser", JSON.stringify(userWithoutPassword))
-  }
-
-  const logout = () => {
-    setUser(null)
-    localStorage.removeItem("currentUser")
-  }
-
-  const updateUserPhoto = (userId: string, photo: string) => {
-    const users = JSON.parse(localStorage.getItem("users") || "[]")
-    const updatedUsers = users.map((u: any) => (u.id === userId ? { ...u, photo } : u))
-    localStorage.setItem("users", JSON.stringify(updatedUsers))
-
-    if (user?.id === userId) {
-      const updatedUser = { ...user, photo }
-      setUser(updatedUser)
-      localStorage.setItem("currentUser", JSON.stringify(updatedUser))
+    // Update the user state in the context
+    if (user && user.id === userId && updatedUser) {
+      setUser({
+        ...user,
+        ...updatedUser,
+      });
     }
   }
 
