@@ -1,0 +1,116 @@
+2025-11-26 20:53:25.072 [info] [main] Log level: Info
+2025-11-26 20:53:25.072 [info] [main] Validating found git in: "C:\Program Files\Git\cmd\git.exe"
+2025-11-26 20:53:25.072 [info] [main] Using git "2.47.1.windows.1" from "C:\Program Files\Git\cmd\git.exe"
+2025-11-26 20:53:25.072 [info] [Model][doInitialScan] Initial repository scan started
+2025-11-26 20:53:25.072 [info] > git rev-parse --show-toplevel [183ms]
+2025-11-26 20:53:25.072 [info] fatal: not a git repository (or any of the parent directories): .git
+2025-11-26 20:53:25.072 [info] > git rev-parse --show-toplevel [2129ms]
+2025-11-26 20:53:25.072 [info] fatal: not a git repository (or any of the parent directories): .git
+2025-11-26 20:53:25.287 [info] > git rev-parse --show-toplevel [208ms]
+2025-11-26 20:53:25.288 [info] fatal: not a git repository (or any of the parent directories): .git
+2025-11-26 20:53:25.622 [info] > git rev-parse --show-toplevel [329ms]
+2025-11-26 20:53:25.622 [info] fatal: not a git repository (or any of the parent directories): .git
+2025-11-26 20:53:26.005 [info] > git rev-parse --show-toplevel [272ms]
+2025-11-26 20:53:26.006 [info] fatal: not a git repository (or any of the parent directories): .git
+2025-11-26 20:53:26.198 [info] > git rev-parse --show-toplevel [175ms]
+2025-11-26 20:53:26.198 [info] fatal: not a git repository (or any of the parent directories): .git
+2025-11-26 20:53:26.371 [info] > git rev-parse --show-toplevel [135ms]
+2025-11-26 20:53:26.371 [info] fatal: not a git repository (or any of the parent directories): .git
+2025-11-26 20:53:26.895 [info] > git rev-parse --show-toplevel [207ms]
+2025-11-26 20:53:26.895 [info] fatal: not a git repository (or any of the parent directories): .git
+2025-11-26 20:53:27.515 [info] > git rev-parse --show-toplevel [56ms]
+2025-11-26 20:53:27.515 [info] fatal: not a git repository (or any of the parent directories): .git
+2025-11-26 20:53:27.574 [info] > git rev-parse --show-toplevel [54ms]
+2025-11-26 20:53:27.574 [info] fatal: not a git repository (or any of the parent directories): .git
+2025-11-26 20:53:27.866 [info] > git rev-parse --show-toplevel [58ms]
+2025-11-26 20:53:27.866 [info] fatal: not a git repository (or any of the parent directories): .git
+2025-11-26 20:53:27.944 [info] > git rev-parse --show-toplevel [65ms]
+2025-11-26 20:53:27.944 [info] fatal: not a git repository (or any of the parent directories): .git
+2025-11-26 20:53:27.945 [info] [Model][doInitialScan] Initial repository scan completed - repositories (0), closed repositories (0), parent repositories (0), unsafe repositories (0)
+2025-11-26 20:53:33.683 [info] > git rev-parse --show-toplevel [5731ms]
+2025-11-26 20:53:33.683 [info] fatal: not a git repository (or any of the parent directories): .git
+2025-11-26 20:54:04.523 [info] > git rev-parse --show-toplevel [96ms]
+2025-11-26 20:54:04.524 [info] fatal: not a git repository (or any of the parent directories): .git
+2025-11-26 20:56:07.504 [info] > git rev-parse --show-toplevel [72ms]
+2025-11-26 20:56:07.504 [info] fatal: not a git repository (or any of the parent directories): .git
+2025-11-26 20:57:29.443 [info] > git rev-parse --show-toplevel [48ms]
+2025-11-26 20:57:29.561 [info] > git rev-parse --git-dir --git-common-dir --show-superproject-working-tree [112ms]
+2025-11-26 20:57:29.576 [info] [Model][openRepository] Opened repository (path): c:\Project\Absensi PU\attendance-web-app
+2025-11-26 20:57:29.576 [info] [Model][openRepository] Opened repository (real path): c:\Project\Absensi PU\attendance-web-app
+2025-11-26 20:57:29.576 [info] [Model][openRepository] Opened repository (kind): repository
+2025-11-26 20:57:29.619 [info] [Git][getRemotes] No remotes found in the git config file
+2025-11-26 20:57:29.681 [info] > git config --get commit.template [80ms]
+2025-11-26 20:57:29.691 [info] > git for-each-ref --format=%(refname)%00%(upstream:short)%00%(objectname)%00%(upstream:track)%00%(upstream:remotename)%00%(upstream:remoteref) --ignore-case refs/heads/master refs/remotes/master [72ms]
+2025-11-26 20:57:29.691 [warning] [Git][getBranch] No such branch: master
+2025-11-26 20:57:29.751 [info] > git for-each-ref --sort -committerdate --format %(refname)%00%(objectname)%00%(*objectname) [47ms]
+2025-11-26 20:57:29.983 [info] > git show --textconv :lib/geolocation.ts [87ms]
+2025-11-26 20:57:29.990 [info] > git ls-files --stage -- lib/geolocation.ts [88ms]
+2025-11-26 20:57:30.038 [info] > git hash-object -t tree /dev/null [49ms]
+2025-11-26 20:57:30.038 [warning] [GitFileSystemProvider][readFile] File not found - git:/c%3A/Project/Absensi%20PU/attendance-web-app/lib/geolocation.ts.git?%7B%22path%22%3A%22c%3A%5C%5CProject%5C%5CAbsensi%20PU%5C%5Cattendance-web-app%5C%5Clib%5C%5Cgeolocation.ts%22%2C%22ref%22%3A%22%22%7D
+2025-11-26 20:57:30.043 [info] > git hash-object -t tree /dev/null [47ms]
+2025-11-26 20:57:30.043 [warning] [GitFileSystemProvider][stat] File not found - git:/c%3A/Project/Absensi%20PU/attendance-web-app/lib/geolocation.ts.git?%7B%22path%22%3A%22c%3A%5C%5CProject%5C%5CAbsensi%20PU%5C%5Cattendance-web-app%5C%5Clib%5C%5Cgeolocation.ts%22%2C%22ref%22%3A%22%22%7D
+2025-11-26 20:57:30.167 [info] > git check-ignore -v -z --stdin [46ms]
+2025-11-26 20:57:30.323 [info] > git status -z -uall [626ms] (cancelled)
+2025-11-26 20:57:30.371 [info] > git check-ignore -v -z --stdin [49ms]
+2025-11-26 20:57:31.875 [info] > git config --local -l [1100ms]
+2025-11-26 20:57:31.901 [info] > git for-each-ref --format=%(refname)%00%(upstream:short)%00%(objectname)%00%(upstream:track)%00%(upstream:remotename)%00%(upstream:remoteref) --ignore-case refs/heads/master refs/remotes/master [1145ms]
+2025-11-26 20:57:31.901 [warning] [Git][getBranch] No such branch: master
+2025-11-26 20:57:31.903 [error] [GitHistoryProvider][resolveHEADMergeBase] Failed to resolve merge base for master: Error: No such branch: master.
+2025-11-26 20:57:31.930 [info] [Git][getRemotes] No remotes found in the git config file
+2025-11-26 20:57:31.977 [info] > git config --get commit.template [102ms]
+2025-11-26 20:57:31.982 [info] > git config --get --local branch.master.remote [81ms]
+2025-11-26 20:57:31.982 [warning] [Git][config] git config failed: Failed to execute git
+2025-11-26 20:57:31.999 [info] > git for-each-ref --format=%(refname)%00%(upstream:short)%00%(objectname)%00%(upstream:track)%00%(upstream:remotename)%00%(upstream:remoteref) --ignore-case refs/heads/master refs/remotes/master [69ms]
+2025-11-26 20:57:31.999 [warning] [Git][getBranch] No such branch: master
+2025-11-26 20:57:32.051 [info] > git config --get --local branch.master.merge [60ms]
+2025-11-26 20:57:32.051 [warning] [Git][config] git config failed: Failed to execute git
+2025-11-26 20:57:32.064 [info] > git for-each-ref --sort -committerdate --format %(refname)%00%(objectname)%00%(*objectname) [51ms]
+2025-11-26 20:57:32.325 [info] > git status -z -uall [319ms] (cancelled)
+2025-11-26 20:57:32.372 [info] > git check-ignore -v -z --stdin [50ms]
+2025-11-26 20:57:34.213 [info] [Git][getRemotes] No remotes found in the git config file
+2025-11-26 20:57:34.297 [info] > git for-each-ref --format=%(refname)%00%(upstream:short)%00%(objectname)%00%(upstream:track)%00%(upstream:remotename)%00%(upstream:remoteref) --ignore-case refs/heads/master refs/remotes/master [79ms]
+2025-11-26 20:57:34.297 [warning] [Git][getBranch] No such branch: master
+2025-11-26 20:57:34.308 [info] > git config --get commit.template [105ms]
+2025-11-26 20:57:34.382 [info] > git for-each-ref --sort -committerdate --format %(refname)%00%(objectname)%00%(*objectname) [61ms]
+2025-11-26 20:57:34.384 [info] > git status -z -uall [71ms]
+2025-11-26 20:57:34.952 [info] > git check-ignore -v -z --stdin [50ms]
+2025-11-26 20:57:35.590 [info] [Git][getRemotes] No remotes found in the git config file
+2025-11-26 20:57:35.637 [info] > git config --get commit.template [47ms]
+2025-11-26 20:57:35.641 [info] > git for-each-ref --format=%(refname)%00%(upstream:short)%00%(objectname)%00%(upstream:track)%00%(upstream:remotename)%00%(upstream:remoteref) --ignore-case refs/heads/master refs/remotes/master [47ms]
+2025-11-26 20:57:35.641 [warning] [Git][getBranch] No such branch: master
+2025-11-26 20:57:35.697 [info] > git for-each-ref --sort -committerdate --format %(refname)%00%(objectname)%00%(*objectname) [47ms]
+2025-11-26 20:57:35.701 [info] > git status -z -uall [56ms]
+2025-11-26 20:57:38.155 [info] > git log --format=%H%n%aN%n%aE%n%at%n%ct%n%P%n%D%n%B -z --shortstat --diff-merges=first-parent -n50 --skip=0 --topo-order --decorate=full --stdin [48ms]
+2025-11-26 20:57:38.155 [info] fatal: bad revision 'refs/heads/master'
+2025-11-26 20:57:38.155 [error] [GitHistoryProvider][provideHistoryItems] Failed to get history items with options '{"historyItemRefs":["refs/heads/master"],"limit":50,"skip":0}': Failed to execute git {
+  "exitCode": 128,
+  "gitCommand": "log",
+  "stdout": "",
+  "stderr": "fatal: bad revision 'refs/heads/master'\n"
+}
+2025-11-26 20:57:38.797 [info] > git check-ignore -v -z --stdin [48ms]
+2025-11-26 20:57:41.342 [info] > git add -A -- . [64ms]
+2025-11-26 20:57:41.342 [info] warning: in the working copy of '.env', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of '.next/dev/build-manifest.json', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of '.next/dev/build/chunks/[root-of-the-server]__51225daf._.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of '.next/dev/build/chunks/[root-of-the-server]__51225daf._.js.map', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of '.next/dev/build/chunks/[root-of-the-server]__974941ed._.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of '.next/dev/build/chunks/[root-of-the-server]__974941ed._.js.map', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of '.next/dev/build/chunks/[turbopack-node]_transforms_postcss_ts_7180740f._.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of '.next/dev/build/chunks/[turbopack-node]_transforms_postcss_ts_7180740f._.js.map', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of '.next/dev/build/chunks/[turbopack]_runtime.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of '.next/dev/build/chunks/[turbopack]_runtime.js.map', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of '.next/dev/build/chunks/node_modules_fe693df6._.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of '.next/dev/build/chunks/node_modules_fe693df6._.js.map', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of '.next/dev/build/postcss.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of '.next/dev/build/postcss.js.map', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of '.next/dev/fallback-build-manifest.json', LF will be replaced by CRLF the next time Git touches it
+error: open(".next/dev/lock"): Permission denied
+error: unable to index file '.next/dev/lock'
+fatal: adding files failed
+2025-11-26 20:57:41.354 [info] [Git][getRemotes] No remotes found in the git config file
+2025-11-26 20:57:41.395 [info] > git config --get commit.template [47ms]
+2025-11-26 20:57:41.403 [info] > git for-each-ref --format=%(refname)%00%(upstream:short)%00%(objectname)%00%(upstream:track)%00%(upstream:remotename)%00%(upstream:remoteref) --ignore-case refs/heads/master refs/remotes/master [48ms]
+2025-11-26 20:57:41.403 [warning] [Git][getBranch] No such branch: master
+2025-11-26 20:57:41.461 [info] > git for-each-ref --sort -committerdate --format %(refname)%00%(objectname)%00%(*objectname) [50ms]
+2025-11-26 20:57:41.464 [info] > git status -z -uall [56ms]
