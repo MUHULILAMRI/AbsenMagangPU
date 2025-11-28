@@ -38,7 +38,7 @@ export default function LoginForm() {
       <div className="p-8">
         <div className="text-center mb-8">
           <div className="inline-block rounded-lg p-3 mb-4">
-            <img src="/logoPu.png" alt="Logo PU" className="h-16 mx-auto object-contain" />
+            <img src="/logoPu.png" alt="Logo PU" className="w-16 h-16 mx-auto" />
           </div>
           <h1 className="text-2xl font-bold text-gray-900">Sistem Absensi</h1>
           <p className="text-gray-600 text-sm mt-2">Masuk ke akun Anda</p>

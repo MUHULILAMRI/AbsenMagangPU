@@ -1,24 +1,17 @@
-Parsing ecmascript source code failed
-./components/login-form.tsx (34:4)
-
-Parsing ecmascript source code failed
-  32 |       router.push("/attendance")
-  33 |     }
-> 34 |   }
-     |    ^
-  35 |
-  36 |
-  37 |
-
-Expected '}', got '<eof>'
-
-Import traces:
-  Client Component Browser:
-    ./components/login-form.tsx [Client Component Browser]
-    ./app/page.tsx [Client Component Browser]
-    ./app/page.tsx [Server Component]
-
-  Client Component SSR:
-    ./components/login-form.tsx [Client Component SSR]
-    ./app/page.tsx [Client Component SSR]
-    ./app/page.tsx [Server Component]
+    at module evaluation (.next/server/chunks/[root-of-the-server]__2b8849a9._.js:55:40724)
+    at instantiateModule (.next/server/chunks/[turbopack]_runtime.js:715:9)
+    at getOrInstantiateModuleFromParent (.next/server/chunks/[turbopack]_runtime.js:738:12)
+    at Context.esmImport [as i] (.next/server/chunks/[turbopack]_runtime.js:228:20)
+    at module evaluation (.next/server/chunks/[root-of-the-server]__f4bd177d._.js:1:1033)
+    at instantiateModule (.next/server/chunks/[turbopack]_runtime.js:715:9)
+    at instantiateRuntimeModule (.next/server/chunks/[turbopack]_runtime.js:743:12)
+    at getOrInstantiateRuntimeModule (.next/server/chunks/[turbopack]_runtime.js:756:12)
+    at Object.m (.next/server/chunks/[turbopack]_runtime.js:765:18)
+    at Object.<anonymous> (.next/server/app/api/users/[id]/route.js:5:3)
+> Build error occurred
+Error: Failed to collect page data for /api/users/[id]
+    at ignore-listed frames {
+  type: 'Error'
+}
+ ELIFECYCLE  Command failed with exit code 1.
+Error: Command "pnpm run build" exited with 1
