@@ -86,10 +86,12 @@ export default function LoginForm() {
               required
             />
             <div className="text-right mt-2">
-              <Link href="/forgot-password" passHref legacyBehavior>
-                <a className="text-sm font-medium text-blue-600 hover:underline">
+              <Link
+                href="/forgot-password"
+                className="text-sm font-medium text-blue-600 hover:underline">
+                
                   Lupa Password?
-                </a>
+                
               </Link>
             </div>
           </div>
@@ -129,5 +131,5 @@ export default function LoginForm() {
         </div>
       </div>
     </Card>
-  )
+  );
 }

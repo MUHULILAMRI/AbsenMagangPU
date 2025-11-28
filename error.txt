@@ -1,13 +1,54 @@
-Need to install the following packages:
-@next/codemod@16.0.5
-Ok to proceed? (y) y
-
-npm warn deprecated inflight@1.0.6: This module is not supported, and leaks memory. Do not use it. Check out lru-cache if you want a good and tested way to coalesce async requests by a key value, which is much more comprehensive and powerful.
-npm warn deprecated rimraf@2.6.3: Rimraf versions prior to v4 are no longer supported
-npm warn deprecated glob@7.2.3: Glob versions prior to v9 are no longer supported
-npm warn deprecated cross-spawn-async@2.2.5: cross-spawn no longer requires a build toolchain, use it instead
-Thank you for using @next/codemod!
-
-But before we continue, please stash or commit your git changes.
-
-You may use the --force flag to override this safety check.
+C:\Project\Absensi PU\attendance-web-app\.next\dev\server\chunks\node_modules_d4538731._.js: Invalid source map. Only conformant source maps can be used to find the original code. Cause: Error: sourceMapURL could not be parsed
+C:\Project\Absensi PU\attendance-web-app\.next\dev\server\chunks\[root-of-the-server]__27943939._.js: Invalid source map. Only conformant source maps can be used to find the original code. Cause: Error: sourceMapURL could not be parsed
+C:\Project\Absensi PU\attendance-web-app\.next\dev\server\chunks\[turbopack]_runtime.js: Invalid source map. Only conformant source maps can be used to find the original code. Cause: Error: sourceMapURL could not be parsed
+C:\Project\Absensi PU\attendance-web-app\.next\dev\server\chunks\node_modules_next_24537ec7._.js: Invalid source map. Only conformant source maps can be used to find the original code. Cause: Error: sourceMapURL could not be parsed
+C:\Project\Absensi PU\attendance-web-app\node_modules\next\dist\server\require-hook.js: Invalid source map. Only conformant source maps can be used to find the original code. Cause: Error: sourceMapURL could not be parsed
+C:\Project\Absensi PU\attendance-web-app\node_modules\next\dist\server\require.js: Invalid source map. Only conformant source maps can be used to find the original code. Cause: Error: sourceMapURL could not be parsed
+C:\Project\Absensi PU\attendance-web-app\node_modules\next\dist\server\load-components.js: Invalid source map. Only conformant source maps can be used to find the original code. Cause: Error: sourceMapURL could not be parsed
+C:\Project\Absensi PU\attendance-web-app\node_modules\next\dist\server\next-server.js: Invalid source map. Only conformant source maps can be used to find the original code. Cause: Error: sourceMapURL could not be parsed
+C:\Project\Absensi PU\attendance-web-app\node_modules\next\dist\server\lib\trace\tracer.js: Invalid source map. Only conformant source maps can be used to find the original code. Cause: Error: sourceMapURL could not be parsed
+C:\Project\Absensi PU\attendance-web-app\node_modules\next\dist\server\dev\next-dev-server.js: Invalid source map. Only conformant source maps can be used to find the original code. Cause: Error: sourceMapURL could not be parsed
+C:\Project\Absensi PU\attendance-web-app\node_modules\next\dist\server\base-server.js: Invalid source map. Only conformant source maps can be used to find the original code. Cause: Error: sourceMapURL could not be parsed
+C:\Project\Absensi PU\attendance-web-app\node_modules\next\dist\trace\trace.js: Invalid source map. Only conformant source maps can be used to find the original code. Cause: Error: sourceMapURL could not be parsed
+C:\Project\Absensi PU\attendance-web-app\node_modules\next\dist\server\lib\router-server.js: Invalid source map. Only conformant source maps can be used to find the original code. Cause: Error: sourceMapURL could not be parsed
+C:\Project\Absensi PU\attendance-web-app\node_modules\next\dist\server\lib\start-server.js: Invalid source map. Only conformant source maps can be used to find the original code. Cause: Error: sourceMapURL could not be parsed
+ ⨯ Error: supabaseKey is required.
+    at module evaluation (C:\Project\Absensi PU\attendance-web-app\.next\dev\server\chunks\[root-of-the-server]__27943939._.js:56:229)    
+    at instantiateModule (C:\Project\Absensi PU\attendance-web-app\.next\dev\server\chunks\[turbopack]_runtime.js:715:9)
+    at getOrInstantiateModuleFromParent (C:\Project\Absensi PU\attendance-web-app\.next\dev\server\chunks\[turbopack]_runtime.js:738:12)  
+    at Context.esmImport [as i] (C:\Project\Absensi PU\attendance-web-app\.next\dev\server\chunks\[turbopack]_runtime.js:228:20)
+    at instantiateModule (C:\Project\Absensi PU\attendance-web-app\.next\dev\server\chunks\[turbopack]_runtime.js:715:9)
+    at instantiateRuntimeModule (C:\Project\Absensi PU\attendance-web-app\.next\dev\server\chunks\[turbopack]_runtime.js:743:12)
+    at getOrInstantiateRuntimeModule (C:\Project\Absensi PU\attendance-web-app\.next\dev\server\chunks\[turbopack]_runtime.js:756:12)     
+    at Object.m (C:\Project\Absensi PU\attendance-web-app\.next\dev\server\chunks\[turbopack]_runtime.js:765:18)
+    at Object.<anonymous> (C:\Project\Absensi PU\attendance-web-app\.next\dev\server\app\api\seed-demo-users\route.js:8:3) {
+  page: '/api/seed-demo-users'
+}
+C:\Project\Absensi PU\attendance-web-app\.next\dev\server\chunks\node_modules_d4538731._.js: Invalid source map. Only conformant source maps can be used to find the original code. Cause: Error: sourceMapURL could not be parsed
+C:\Project\Absensi PU\attendance-web-app\.next\dev\server\chunks\[root-of-the-server]__27943939._.js: Invalid source map. Only conformant source maps can be used to find the original code. Cause: Error: sourceMapURL could not be parsed
+C:\Project\Absensi PU\attendance-web-app\.next\dev\server\chunks\[turbopack]_runtime.js: Invalid source map. Only conformant source maps can be used to find the original code. Cause: Error: sourceMapURL could not be parsed
+C:\Project\Absensi PU\attendance-web-app\.next\dev\server\chunks\node_modules_next_24537ec7._.js: Invalid source map. Only conformant source maps can be used to find the original code. Cause: Error: sourceMapURL could not be parsed
+C:\Project\Absensi PU\attendance-web-app\node_modules\next\dist\server\require-hook.js: Invalid source map. Only conformant source maps can be used to find the original code. Cause: Error: sourceMapURL could not be parsed
+C:\Project\Absensi PU\attendance-web-app\node_modules\next\dist\server\require.js: Invalid source map. Only conformant source maps can be used to find the original code. Cause: Error: sourceMapURL could not be parsed
+C:\Project\Absensi PU\attendance-web-app\node_modules\next\dist\server\load-components.js: Invalid source map. Only conformant source maps can be used to find the original code. Cause: Error: sourceMapURL could not be parsed
+C:\Project\Absensi PU\attendance-web-app\node_modules\next\dist\server\next-server.js: Invalid source map. Only conformant source maps can be used to find the original code. Cause: Error: sourceMapURL could not be parsed
+C:\Project\Absensi PU\attendance-web-app\node_modules\next\dist\server\lib\trace\tracer.js: Invalid source map. Only conformant source maps can be used to find the original code. Cause: Error: sourceMapURL could not be parsed
+C:\Project\Absensi PU\attendance-web-app\node_modules\next\dist\server\dev\next-dev-server.js: Invalid source map. Only conformant source maps can be used to find the original code. Cause: Error: sourceMapURL could not be parsed
+C:\Project\Absensi PU\attendance-web-app\node_modules\next\dist\server\base-server.js: Invalid source map. Only conformant source maps can be used to find the original code. Cause: Error: sourceMapURL could not be parsed
+C:\Project\Absensi PU\attendance-web-app\node_modules\next\dist\trace\trace.js: Invalid source map. Only conformant source maps can be used to find the original code. Cause: Error: sourceMapURL could not be parsed
+C:\Project\Absensi PU\attendance-web-app\node_modules\next\dist\server\lib\router-server.js: Invalid source map. Only conformant source maps can be used to find the original code. Cause: Error: sourceMapURL could not be parsed
+C:\Project\Absensi PU\attendance-web-app\node_modules\next\dist\server\lib\start-server.js: Invalid source map. Only conformant source maps can be used to find the original code. Cause: Error: sourceMapURL could not be parsed
+ ⨯ Error: supabaseKey is required.
+    at module evaluation (C:\Project\Absensi PU\attendance-web-app\.next\dev\server\chunks\[root-of-the-server]__27943939._.js:56:229)    
+    at instantiateModule (C:\Project\Absensi PU\attendance-web-app\.next\dev\server\chunks\[turbopack]_runtime.js:715:9)
+    at getOrInstantiateModuleFromParent (C:\Project\Absensi PU\attendance-web-app\.next\dev\server\chunks\[turbopack]_runtime.js:738:12)  
+    at Context.esmImport [as i] (C:\Project\Absensi PU\attendance-web-app\.next\dev\server\chunks\[turbopack]_runtime.js:228:20)
+    at instantiateModule (C:\Project\Absensi PU\attendance-web-app\.next\dev\server\chunks\[turbopack]_runtime.js:715:9)
+    at instantiateRuntimeModule (C:\Project\Absensi PU\attendance-web-app\.next\dev\server\chunks\[turbopack]_runtime.js:743:12)
+    at getOrInstantiateRuntimeModule (C:\Project\Absensi PU\attendance-web-app\.next\dev\server\chunks\[turbopack]_runtime.js:756:12)     
+    at Object.m (C:\Project\Absensi PU\attendance-web-app\.next\dev\server\chunks\[turbopack]_runtime.js:765:18)
+    at Object.<anonymous> (C:\Project\Absensi PU\attendance-web-app\.next\dev\server\app\api\seed-demo-users\route.js:8:3) {
+  page: '/api/seed-demo-users'
+}
+ POST /api/seed-demo-users 500 in 610ms
+ POST /api/seed-demo-users 500 in 1660ms (compile: 1651ms, render: 9ms)

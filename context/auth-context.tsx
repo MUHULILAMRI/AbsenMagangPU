@@ -2,7 +2,9 @@
 
 import type React from "react"
 import { createContext, useContext, useEffect, useState } from "react"
-import { supabase } from "@/lib/supabaseClient"
+
+// NOTE: This is a mock authentication provider for demo purposes.
+// It uses localStorage and sessionStorage to simulate a user session.
 
 export interface User {
   id: string
@@ -11,12 +13,13 @@ export interface User {
   role: "employee" | "admin"
   department?: string
   photo?: string
+  password?: string // Password is part of the user object in localStorage
 }
 
 interface AuthContextType {
   user: User | null
   loading: boolean
-  login: (email: string, password: string) => Promise<any>
+  login: (email: string, password: string) => Promise<{ message: string } | undefined>
   logout: () => void
   isAuthenticated: boolean
   updateUserPhoto: (userId: string, photo: string) => void
@@ -29,85 +32,63 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const getSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        const { data: userProfile } = await supabase
-          .from('users')
-          .select('*')
-          .eq('id', session.user.id)
-          .single();
-        
-        if (userProfile) {
-          setUser({
-            ...session.user,
-            ...userProfile,
-          });
-        }
+    // Check for a user session in sessionStorage on initial load
+    try {
+      const sessionUser = sessionStorage.getItem("sessionUser")
+      if (sessionUser) {
+        setUser(JSON.parse(sessionUser))
       }
-      setLoading(false);
-    };
-
-    getSession();
-
-    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (session) {
-        const { data: userProfile } = await supabase
-          .from('users')
-          .select('*')
-          .eq('id', session.user.id)
-          .single();
-        
-        if (userProfile) {
-          setUser({
-            ...session.user,
-            ...userProfile,
-          });
-        }
-      } else {
-        setUser(null);
-      }
-      setLoading(false);
-    });
-
-    return () => {
-      authListener?.subscription.unsubscribe();
-    };
-  }, []);
+    } catch (error) {
+      console.error("Failed to parse session user from sessionStorage", error)
+    }
+    setLoading(false)
+  }, [])
 
   const login = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) {
-      return error;
-    }
-    // The user will be set by onAuthStateChange listener
-  };
+    try {
+      const usersData = localStorage.getItem("users")
+      if (!usersData) {
+        return { message: "No users found in demo data." }
+      }
 
-  const logout = async () => {
-    await supabase.auth.signOut()
-    setUser(null)
+      const users: User[] = JSON.parse(usersData)
+      const foundUser = users.find(
+        (u) => u.email === email && u.password === password,
+      )
+
+      if (foundUser) {
+        const { password, ...userToSave } = foundUser; // Don't store password in session
+        setUser(userToSave as User);
+        sessionStorage.setItem("sessionUser", JSON.stringify(userToSave))
+        return undefined // Signifies success
+      } else {
+        return { message: "Invalid login credentials" }
+      }
+    } catch (error) {
+      console.error("Login error:", error)
+      return { message: "An unexpected error occurred during login." }
+    }
   }
 
-  const updateUserPhoto = async (userId: string, photo: string) => {
-    // Update the photo URL in the Supabase 'users' table
-    const { data: updatedUser, error } = await supabase
-      .from('users')
-      .update({ photo })
-      .eq('id', userId)
-      .select()
-      .single();
+  const logout = () => {
+    setUser(null)
+    sessionStorage.removeItem("sessionUser")
+  }
 
-    if (error) {
-      console.error("Error updating user photo:", error);
-      return;
-    }
+  const updateUserPhoto = (userId: string, photo: string) => {
+    // This is a mock update. It updates the user in the current session
+    // and also in the main 'users' list in localStorage.
+    if (user && user.id === userId) {
+      const updatedUser = { ...user, photo };
+      setUser(updatedUser);
+      sessionStorage.setItem("sessionUser", JSON.stringify(updatedUser));
 
-    // Update the user state in the context
-    if (user && user.id === userId && updatedUser) {
-      setUser({
-        ...user,
-        ...updatedUser,
-      });
+      const usersData = localStorage.getItem("users");
+      if (usersData) {
+        let users: User[] = JSON.parse(usersData);
+        users = users.map(u => u.id === userId ? { ...u, photo } : u);
+        localStorage.setItem("users", JSON.stringify(users));
+      }
     }
   }
 

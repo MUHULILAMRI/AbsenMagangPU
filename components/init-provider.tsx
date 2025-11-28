@@ -1,15 +1,15 @@
 "use client"
 
 import type React from "react"
-
 import { useEffect } from "react"
 
 export function InitProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     // Initialize demo data on first load
-    const initialized = localStorage.getItem("initialized")
+    const initialized = localStorage.getItem("initialized");
 
     if (!initialized) {
+      console.log("Initializing demo data in localStorage...");
       const defaultUsers = [
         {
           id: "emp1",
@@ -43,13 +43,14 @@ export function InitProvider({ children }: { children: React.ReactNode }) {
           role: "admin",
           department: "Management",
         },
-      ]
+      ];
 
-      localStorage.setItem("users", JSON.stringify(defaultUsers))
-      localStorage.setItem("attendance", JSON.stringify([]))
-      localStorage.setItem("initialized", "true")
+      localStorage.setItem("users", JSON.stringify(defaultUsers));
+      localStorage.setItem("attendance", JSON.stringify([]));
+      localStorage.setItem("initialized", "true");
+      console.log("Demo data initialized.");
     }
-  }, [])
+  }, []);
 
-  return <>{children}</>
+  return <>{children}</>;
 }
