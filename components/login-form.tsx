@@ -4,6 +4,7 @@ import type React from "react"
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import Link from "next/link"
 import { useAuth } from "@/context/auth-context"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
@@ -22,13 +23,13 @@ export default function LoginForm() {
     setError("")
     setLoading(true)
 
-    try {
-      await login(email, password)
-      router.push("/attendance")
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Terjadi kesalahan")
-    } finally {
+    const error = await login(email.trim(), password)
+
+    if (error) {
+      setError(error.message)
       setLoading(false)
+    } else {
+      router.push("/attendance")
     }
   }
 
@@ -84,6 +85,13 @@ export default function LoginForm() {
               placeholder="Masukkan password"
               required
             />
+            <div className="text-right mt-2">
+              <Link href="/forgot-password" passHref legacyBehavior>
+                <a className="text-sm font-medium text-blue-600 hover:underline">
+                  Lupa Password?
+                </a>
+              </Link>
+            </div>
           </div>
 
           {error && (

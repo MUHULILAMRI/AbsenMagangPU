@@ -59,13 +59,12 @@ export default function UserForm({ user, onSave, onCancel }: UserFormProps) {
         }
       }
     } else { // Adding new user
-      if (!formData.password) {
-        newErrors.password = "Password harus diisi"
+      if (!formData.password.trim()) {
+        newErrors.password = "Password harus diisi";
       } else if (formData.password.length < 6) {
-        newErrors.password = "Password minimal 6 karakter"
-      }
-      if (formData.password !== formData.confirmPassword) {
-        newErrors.confirmPassword = "Password tidak cocok"
+        newErrors.password = "Password minimal 6 karakter";
+      } else if (formData.password !== formData.confirmPassword) {
+        newErrors.confirmPassword = "Password tidak cocok";
       }
     }
 

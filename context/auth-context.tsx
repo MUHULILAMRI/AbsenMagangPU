@@ -1,8 +1,8 @@
 "use client"
 
 import type React from "react"
-
 import { createContext, useContext, useEffect, useState } from "react"
+import { supabase } from "@/lib/supabaseClient"
 
 export interface User {
   id: string
@@ -16,7 +16,7 @@ export interface User {
 interface AuthContextType {
   user: User | null
   loading: boolean
-  login: (email: string, password: string) => Promise<void>
+  login: (email: string, password: string) => Promise<any>
   logout: () => void
   isAuthenticated: boolean
   updateUserPhoto: (userId: string, photo: string) => void
@@ -75,31 +75,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  import { supabase } from "@/lib/supabaseClient"
-
-// ... (existing User interface) ...
-
-const AuthContext = createContext<AuthContextType | undefined>(undefined)
-
-export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null)
-  const [loading, setLoading] = useState(true)
-
-  // ... (useEffect for session management will be updated later) ...
-
   const login = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
-      throw error
+      return error;
     }
     // The user will be set by onAuthStateChange listener
-  }
+  };
 
   const logout = async () => {
     await supabase.auth.signOut()
     setUser(null)
   }
-
 
   const updateUserPhoto = async (userId: string, photo: string) => {
     // Update the photo URL in the Supabase 'users' table
