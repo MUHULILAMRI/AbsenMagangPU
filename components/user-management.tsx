@@ -7,7 +7,7 @@ import { Plus, Edit2, Trash2, Check, Loader2 } from "lucide-react"
 import UserForm from "./user-form"
 
 interface User {
-  id: number
+  id: string
   name: string
   email: string
   password?: string // Password can be optional on the client side
@@ -30,22 +30,18 @@ export default function UserManagement() {
     loadUsers()
   }, [])
 
-  const loadUsers = async () => {
-    setLoading(true)
-    setError(null)
+  const loadUsers = () => {
+    setLoading(true);
     try {
-      const response = await fetch("/api/users")
-      if (!response.ok) {
-        throw new Error("Gagal memuat data pengguna.")
-      }
-      const data = await response.json()
-      setUsers(data)
+      const usersData = localStorage.getItem("users");
+      const users = usersData ? JSON.parse(usersData) : [];
+      setUsers(users);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Terjadi kesalahan")
+      setError(err instanceof Error ? err.message : "Gagal memuat data pengguna dari localStorage.");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const filteredUsers = users.filter(
     (user) =>
@@ -68,30 +64,43 @@ export default function UserManagement() {
     setSuccess('');
   }
 
-  const handleDeleteUser = async (id: number) => {
-    setError(null);
-    setSuccess('');
+  const handleAddRandomUser = () => {
+    try {
+      const usersData = localStorage.getItem("users");
+      const users: User[] = usersData ? JSON.parse(usersData) : [];
+      
+      const randomId = Math.floor(Math.random() * 1000);
+      const newUser: User = {
+        id: `rand_${Date.now()}`,
+        name: `User Acak ${randomId}`,
+        email: `user${randomId}@example.com`,
+        password: "password123",
+        role: "employee",
+        department: "General",
+        photo: "",
+      };
 
+      users.push(newUser);
+      localStorage.setItem("users", JSON.stringify(users));
+
+      setSuccess(`User "${newUser.name}" berhasil ditambahkan.`);
+      loadUsers(); // Refresh the user list
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Gagal menambahkan user acak.');
+    }
+    setTimeout(() => setSuccess(''), 3000);
+  };
+
+  const handleDeleteUser = (id: number | string) => {
     if (!confirm("Apakah Anda yakin ingin menghapus user ini?")) {
       return;
     }
 
     try {
-      const response = await fetch(`/api/users/${id}`, {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-      });
-
-      if (!response.ok) {
-        let errorMsg = `Error ${response.status}: Gagal menghapus pengguna.`;
-        try {
-          const errorData = await response.json();
-          errorMsg = `Error: ${errorData.error || 'Terjadi kesalahan tidak diketahui.'}`;
-        } catch (e) {
-          errorMsg = `Error ${response.status}: ${response.statusText}`;
-        }
-        throw new Error(errorMsg);
-      }
+      const usersData = localStorage.getItem("users");
+      let users = usersData ? JSON.parse(usersData) : [];
+      users = users.filter((user: User) => user.id !== id);
+      localStorage.setItem("users", JSON.stringify(users));
       
       setSuccess('User berhasil dihapus');
       loadUsers(); // Refresh the user list
@@ -101,47 +110,33 @@ export default function UserManagement() {
     setTimeout(() => setSuccess(''), 3000);
   };
 
-  const handleSaveUser = async (userData: Partial<User>) => {
-    setError(null);
-    setSuccess('');
-
+  const handleSaveUser = (userData: Partial<User>) => {
     try {
-      let response;
+      const usersData = localStorage.getItem("users");
+      let users: User[] = usersData ? JSON.parse(usersData) : [];
+
       if (editingUser) {
         // Edit existing user
-        response = await fetch(`/api/users/${editingUser.id}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(userData),
-        });
-        if (!response.ok) {
-           let errorMsg = `Error ${response.status}: Gagal memperbarui pengguna.`;
-           try {
-             const errorData = await response.json();
-             errorMsg = `Error: ${errorData.error || 'Terjadi kesalahan tidak diketahui.'}`;
-           } catch (e) {
-             errorMsg = `Error ${response.status}: ${response.statusText}`;
-           }
-           throw new Error(errorMsg);
-        }
+        users = users.map((user) =>
+          user.id === editingUser.id ? { ...user, ...userData } : user
+        );
         setSuccess('User berhasil diperbarui');
       } else {
         // Add new user
-        response = await fetch('/api/users', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(userData),
-        });
-        
-        const responseData = await response.json();
-
-        if (!response.ok) {
-          const errorMsg = `Error: ${responseData.error || 'Gagal menambahkan pengguna baru.'}`;
-          throw new Error(errorMsg);
-        }
-        setSuccess(responseData.message || 'User berhasil ditambahkan');
+        const newUser: User = {
+          id: `user_${Date.now()}`, // Simple unique ID for demo
+          name: userData.name || '',
+          email: userData.email || '',
+          password: userData.password || 'password123', // Default password for new users
+          role: userData.role || 'employee',
+          department: userData.department || '',
+          photo: userData.photo || '',
+        };
+        users.push(newUser);
+        setSuccess('User berhasil ditambahkan');
       }
       
+      localStorage.setItem("users", JSON.stringify(users));
       loadUsers(); // Refresh the user list
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Terjadi kesalahan saat menyimpan.');
@@ -149,7 +144,7 @@ export default function UserManagement() {
 
     setShowForm(false);
     setEditingUser(null);
-    setTimeout(() => setSuccess(''), 5000); // Increased timeout for longer message
+    setTimeout(() => setSuccess(''), 3000);
   };
 
   return (
@@ -159,10 +154,16 @@ export default function UserManagement() {
           <h1 className="text-3xl font-bold text-gray-900">Kelola User</h1>
           <p className="text-gray-600 mt-1">Total: {users.length} user terdaftar</p>
         </div>
-        <Button onClick={handleAddUser} className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2">
-          <Plus className="w-5 h-5" />
-          Tambah User
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button onClick={handleAddRandomUser} className="bg-green-600 hover:bg-green-700 text-white flex items-center gap-2">
+            <Plus className="w-5 h-5" />
+            Tambah Pengguna Acak
+          </Button>
+          <Button onClick={handleAddUser} className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2">
+            <Plus className="w-5 h-5" />
+            Tambah User
+          </Button>
+        </div>
       </div>
 
       {success && (

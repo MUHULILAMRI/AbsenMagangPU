@@ -33,17 +33,6 @@ export default function LoginForm() {
     }
   }
 
-  // Demo credentials
-  const fillDemo = (role: "employee" | "admin") => {
-    if (role === "employee") {
-      setEmail("karyawan@example.com")
-      setPassword("password123")
-    } else {
-      setEmail("admin@example.com")
-      setPassword("admin123")
-    }
-  }
-
   return (
     <Card className="w-full max-w-md bg-white shadow-xl">
       <div className="p-8">
@@ -111,24 +100,6 @@ export default function LoginForm() {
             {loading ? "Memproses..." : "Masuk"}
           </Button>
         </form>
-
-        <div className="mt-6 space-y-2">
-          <p className="text-xs text-gray-500 text-center font-medium">Demo Credentials:</p>
-          <div className="flex gap-2">
-            <button
-              onClick={() => fillDemo("employee")}
-              className="flex-1 text-xs py-2 px-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium transition"
-            >
-              Karyawan Demo
-            </button>
-            <button
-              onClick={() => fillDemo("admin")}
-              className="flex-1 text-xs py-2 px-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium transition"
-            >
-              Admin Demo
-            </button>
-          </div>
-        </div>
       </div>
     </Card>
   );

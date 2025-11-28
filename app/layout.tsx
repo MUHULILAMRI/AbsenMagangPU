@@ -14,20 +14,7 @@ export const metadata: Metadata = {
   description: "Aplikasi absensi dengan fitur monitoring, camera, dan geolocation",
   generator: "MUH.ULIL AMRI, S.Kom, MTCNA",
   icons: {
-    icon: [
-      {
-        url: "/icon-light-32x32.png",
-        media: "(prefers-color-scheme: light)",
-      },
-      {
-        url: "/icon-dark-32x32.png",
-        media: "(prefers-color-scheme: dark)",
-      },
-      {
-        url: "/icon.svg",
-        type: "image/svg+xml",
-      },
-    ],
+    icon: "/logoPu.png",
     apple: "/apple-icon.png",
   },
 }

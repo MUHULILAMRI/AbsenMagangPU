@@ -1,5 +1,5 @@
-const OFFICE_LAT = -5.172139451213632
-const OFFICE_LON = 119.41115478207638
+const OFFICE_LAT = -5.1597320842062295
+const OFFICE_LON = 119.4099062887864
 const RADIUS_METERS = 100 // 100 meter radius
 
 // Haversine formula to calculate distance between two coordinates
