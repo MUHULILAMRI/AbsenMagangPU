@@ -127,7 +127,7 @@ export default function AnalyticsDashboard() {
         <Card className="bg-white p-6 shadow-lg">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-gray-600 text-sm font-medium">Total Karyawan</p>
+              <p className="text-gray-600 text-sm font-medium">Total Peserta Magang</p>
               <p className="text-3xl font-bold text-gray-900 mt-2">{stats.totalEmployees}</p>
             </div>
             <Users className="w-12 h-12 text-blue-600 opacity-10" />

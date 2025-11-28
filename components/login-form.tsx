@@ -37,15 +37,8 @@ export default function LoginForm() {
     <Card className="w-full max-w-md bg-white shadow-xl">
       <div className="p-8">
         <div className="text-center mb-8">
-          <div className="inline-block bg-blue-600 rounded-lg p-3 mb-4">
-            <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 8v4l3 2m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
+          <div className="inline-block rounded-lg p-3 mb-4">
+            <img src="/logoPu.png" alt="Logo PU" className="h-16 mx-auto object-contain" />
           </div>
           <h1 className="text-2xl font-bold text-gray-900">Sistem Absensi</h1>
           <p className="text-gray-600 text-sm mt-2">Masuk ke akun Anda</p>

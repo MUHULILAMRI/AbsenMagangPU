@@ -240,7 +240,7 @@ export default function UserForm({ user, onSave, onCancel }: UserFormProps) {
               onChange={(e) => setFormData({ ...formData, role: e.target.value as "employee" | "admin" })}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none transition"
             >
-              <option value="employee">Karyawan</option>
+              <option value="employee">Peserta Magang</option>
               <option value="admin">Admin</option>
             </select>
           </div>

@@ -44,11 +44,7 @@ export default function AdminNavBar() {
     <nav className="bg-white shadow-md">
       <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="bg-purple-600 rounded-lg p-2">
-            <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-            </svg>
-          </div>
+          <img src="/logoPu.png" alt="Logo PU" className="h-10" />
           <div>
             <h1 className="font-bold text-lg text-gray-900">Panel Admin</h1>
             <p className="text-xs text-gray-600">Sistem Manajemen Absensi Magang BPSDM PU</p>

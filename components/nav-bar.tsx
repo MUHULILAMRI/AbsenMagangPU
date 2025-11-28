@@ -23,7 +23,7 @@ export default function NavBar() {
           <img src="/logoPu.png" alt="Logo" className="h-10" />
           <div>
             <h1 className="font-bold text-lg text-gray-900">Absensi Magang BPSDM PU</h1>
-            <p className="text-xs text-gray-600">{user?.role === "admin" ? "Admin" : "Karyawan"}</p>
+            <p className="text-xs text-gray-600">{user?.role === "admin" ? "Admin" : "Peserta Magang"}</p>
           </div>
         </div>
 

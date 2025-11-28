@@ -251,7 +251,7 @@ export default function UserManagement() {
                           user.role === "admin" ? "bg-purple-100 text-purple-700" : "bg-blue-100 text-blue-700"
                         }`}
                       >
-                        {user.role === "admin" ? "Admin" : "Karyawan"}
+                        {user.role === "admin" ? "Admin" : "Peserta Magang"}
                       </span>
                     </td>
                     <td className="px-6 py-4">

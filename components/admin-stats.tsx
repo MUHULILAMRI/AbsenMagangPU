@@ -54,7 +54,7 @@ export default function AdminStats() {
 
   const statCards = [
     {
-      title: "Total Karyawan",
+      title: "Total Peserta Magang",
       value: stats.totalEmployees,
       icon: Users,
       color: "bg-blue-500",
