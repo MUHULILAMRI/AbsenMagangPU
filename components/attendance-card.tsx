@@ -110,6 +110,15 @@ export default function AttendanceCard() {
       return
     }
 
+    if (type === "check-out") {
+      const now = new Date()
+      const checkOutHour = 16 // 4 PM
+      if (now.getHours() < checkOutHour) {
+        setLocationError(`Absen pulang hanya bisa dilakukan setelah jam ${checkOutHour}:00.`)
+        return
+      }
+    }
+
     setAttendanceType(type)
     setLocation(null)
     setLocationError("")
@@ -173,7 +182,14 @@ export default function AttendanceCard() {
       <Card className="bg-white shadow-xl overflow-hidden">
         <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-8 text-white">
           <div className="text-center">
-            <h2 className="text-2xl font-bold mb-2">{user?.name}</h2>
+            {user?.photo_url && (
+              <img
+                src={user.photo_url}
+                alt={user.full_name || "User Photo"}
+                className="w-24 h-24 rounded-full mx-auto mb-4 object-cover border-2 border-white shadow-md"
+              />
+            )}
+            <h2 className="text-2xl font-bold mb-1">{user?.full_name}</h2>
             <p className="text-blue-100 mb-6">{user?.department}</p>
 
             <div className="bg-white/10 rounded-lg p-6 backdrop-blur-sm">
@@ -231,11 +247,10 @@ export default function AttendanceCard() {
               className="bg-red-600 hover:bg-red-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-semibold py-6 rounded-lg flex items-center justify-center gap-2 transition"
             >
               {locatingInProgress ? <Loader className="w-5 h-5 animate-spin" /> : <Camera className="w-5 h-5" />}
-              <span className="text-center">
-                <div>Absen Pulang</div>
-                <div className="text-xs font-normal">Jam: 16:10</div>
-              </span>
-            </Button>
+                              <span className="text-center">
+                                <div>Absen Pulang</div>
+                                <div className="text-xs font-normal">Jam: 16:00</div>
+                              </span>            </Button>
           </div>
 
           <div className="pt-4 border-t border-gray-200">

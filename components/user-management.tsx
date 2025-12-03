@@ -9,72 +9,85 @@ import { supabase } from "@/lib/supabaseClient" // Import Supabase client
 
 // This interface should align with your 'profiles' table and the User interface in auth-context
 interface User {
-  id: string
-  full_name: string
-  email: string
-  password?: string // Password is only for creation, not for display
-  role: "employee" | "admin"
-  department?: string
-  photo_url?: string
+  id: string;
+  full_name: string;
+  email: string;
+  password?: string;
+  role: "employee" | "admin";
+  department?: string;
+  photo_url?: string;
+  photo?: string; // a temporary field for base64 data
 }
 
 export default function UserManagement() {
-  const [users, setUsers] = useState<User[]>([])
-  const [showForm, setShowForm] = useState(false)
-  const [editingUser, setEditingUser] = useState<User | null>(null)
-  const [success, setSuccess] = useState("")
-  const [searchTerm, setSearchTerm] = useState("")
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const [users, setUsers] = useState<User[]>([]);
+  const [showForm, setShowForm] = useState(false);
+  const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [success, setSuccess] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    loadUsers()
-  }, [])
+    loadUsers();
+  }, []);
 
   const loadUsers = async () => {
-    setLoading(true)
-    setError(null)
+    setLoading(true);
+    setError(null);
     try {
-      const { data: usersData, error: fetchError } = await supabase
-        .from("profiles")
-        .select("*")
-        .order("email", { ascending: true })
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (!session) throw new Error("Not authenticated");
 
-      if (fetchError) {
-        throw new Error(fetchError.message || "Gagal memuat data pengguna.")
+      // Use the API route to fetch users
+      const response = await fetch('/api/users', {
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.error || "Gagal memuat data pengguna.");
       }
-      setUsers(usersData)
+      const usersData = await response.json();
+      setUsers(usersData);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Terjadi kesalahan yang tidak terduga.")
+      setError(
+        err instanceof Error ? err.message : "Terjadi kesalahan yang tidak terduga."
+      );
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
-
+  };
+  
   const filteredUsers = users.filter(
     (user) =>
       (user.full_name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
       (user.email || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (user.department || "").toLowerCase().includes(searchTerm.toLowerCase()),
-  )
+      (user.department || "").toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   const handleAddUser = () => {
-    setEditingUser(null)
-    setShowForm(true)
-    setError(null)
-    setSuccess("")
-  }
+    setEditingUser(null);
+    setShowForm(true);
+    setError(null);
+    setSuccess("");
+  };
 
   const handleEditUser = (user: User) => {
-    setEditingUser(user)
-    setShowForm(true)
-    setError(null)
-    setSuccess("")
-  }
+    setEditingUser(user);
+    setShowForm(true);
+    setError(null);
+    setSuccess("");
+  };
 
   const handleDeleteUser = async (id: string) => {
-    if (!confirm("Apakah Anda yakin ingin menghapus user ini? Aksi ini tidak dapat dibatalkan.")) {
-      return
+    if (
+      !confirm("Apakah Anda yakin ingin menghapus user ini? Aksi ini tidak dapat dibatalkan.")
+    ) {
+      return;
     }
     setError(null);
     setSuccess('');
@@ -82,80 +95,83 @@ export default function UserManagement() {
     try {
       const {
         data: { session },
-      } = await supabase.auth.getSession()
-      if (!session) throw new Error("Not authenticated")
+      } = await supabase.auth.getSession();
+      if (!session) throw new Error("Not authenticated");
 
       const response = await fetch(`/api/users/${id}`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${session.access_token}`,
         },
-      })
+      });
 
       if (!response.ok) {
-        const err = await response.json()
-        throw new Error(err.error || "Gagal menghapus user.")
+        const err = await response.json();
+        throw new Error(err.error || "Gagal menghapus user.");
       }
 
-      setSuccess("User berhasil dihapus.")
-      loadUsers() // Refresh the user list
+      setSuccess("User berhasil dihapus.");
+      loadUsers(); // Refresh the user list
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Terjadi kesalahan saat menghapus.")
+      setError(err instanceof Error ? err.message : "Terjadi kesalahan saat menghapus.");
     }
-    setTimeout(() => setSuccess(""), 3000)
-  }
+    setTimeout(() => setSuccess(""), 3000);
+  };
 
   const handleSaveUser = async (userData: Partial<User>) => {
     setError(null);
     setSuccess('');
 
     try {
-      if (editingUser) {
-        // Edit existing user's profile
-        const { error: updateError } = await supabase
-          .from("profiles")
-          .update({
-            full_name: userData.full_name,
-            department: userData.department,
-            role: userData.role,
-          })
-          .eq("id", editingUser.id)
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (!session) throw new Error("Not authenticated");
 
-        if (updateError) throw updateError
-        setSuccess("User berhasil diperbarui.")
+      let response;
+      if (editingUser) {
+        // Edit existing user
+        response = await fetch(`/api/users/${editingUser.id}`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify(userData),
+        });
+        if (!response.ok) {
+          const err = await response.json();
+          throw new Error(err.error || "Gagal memperbarui user.");
+        }
+        setSuccess("User berhasil diperbarui.");
 
       } else {
         // Add new user
-        const {
-          data: { session },
-        } = await supabase.auth.getSession()
-        if (!session) throw new Error("Not authenticated")
-
-        const response = await fetch("/api/users", {
+        response = await fetch("/api/users", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${session.access_token}`,
           },
           body: JSON.stringify(userData),
-        })
+        });
 
         if (!response.ok) {
-          const err = await response.json()
-          throw new Error(err.error || "Gagal membuat user baru.")
+          const err = await response.json();
+          throw new Error(err.error || "Gagal membuat user baru.");
         }
-        setSuccess("User berhasil ditambahkan.")
+        setSuccess("User berhasil ditambahkan.");
       }
 
-      loadUsers() // Refresh the user list
+      loadUsers(); // Refresh the user list
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Terjadi kesalahan saat menyimpan.")
+      setError(err instanceof Error ? err.message : "Terjadi kesalahan saat menyimpan.");
     }
 
-    setShowForm(false)
-    setEditingUser(null)
-    setTimeout(() => setSuccess(""), 3000)
-  }
+    setShowForm(false);
+    setEditingUser(null);
+    setTimeout(() => setSuccess(""), 3000);
+  };
 
   return (
     <div className="space-y-6">

@@ -83,6 +83,20 @@ export default function AdminNavBar() {
             <Download className="w-4 h-4" />
             Download
           </Button>
+
+          {user && (
+            <div className="flex items-center gap-2">
+              {user.photo_url && (
+                <img
+                  src={user.photo_url}
+                  alt={user.full_name || "User"}
+                  className="w-8 h-8 rounded-full object-cover"
+                />
+              )}
+              <span className="text-gray-800 font-medium">{user.full_name}</span>
+            </div>
+          )}
+
           <Button onClick={handleLogout} className="bg-red-600 hover:bg-red-700 text-white flex items-center gap-2">
             <LogOut className="w-4 h-4" />
             Keluar
@@ -90,7 +104,19 @@ export default function AdminNavBar() {
         </div>
 
         {mobileMenuOpen && (
-          <div className="absolute top-16 right-4 bg-white rounded-lg shadow-lg p-4 z-50 space-y-2">
+          <div className="absolute top-16 right-4 bg-white rounded-lg shadow-lg p-4 z-50 space-y-2 w-48">
+            {user && (
+              <div className="flex items-center gap-2 pb-2 border-b border-gray-200">
+                {user.photo_url && (
+                  <img
+                    src={user.photo_url}
+                    alt={user.full_name || "User"}
+                    className="w-8 h-8 rounded-full object-cover"
+                  />
+                )}
+                <span className="text-gray-800 font-medium truncate">{user.full_name}</span>
+              </div>
+            )}
             <Link href="/admin" className="block">
               <Button className="w-full bg-purple-600 hover:bg-purple-700 text-white justify-start">
                 <BarChart3 className="w-4 h-4 mr-2" />

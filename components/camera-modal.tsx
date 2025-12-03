@@ -133,8 +133,8 @@ export default function CameraModal({ onCapture, onClose, attendanceType }: Came
             </div>
           ) : (
             <>
-              <div className="relative bg-black rounded-xl overflow-hidden aspect-video border-4 border-blue-500/30">
-                <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover" />
+              <div className="relative bg-black rounded-xl overflow-hidden border-4 border-blue-500/30">
+                <video ref={videoRef} autoPlay playsInline className="w-full h-auto" />
                 {!cameraActive && (
                   <div className="absolute inset-0 flex items-center justify-center bg-black/50">
                     <div className="text-center">

@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react"
 import { Card } from "@/components/ui/card"
-import { Clock, MapPin, Camera, ChevronDown } from "lucide-react"
+import { Clock, MapPin, Camera, ChevronDown, Loader2 } from "lucide-react"
+import { supabase } from "@/lib/supabaseClient" // Import supabase for session
 
 interface AttendanceRecord {
   id: string
@@ -13,9 +14,10 @@ interface AttendanceRecord {
   photo: string
 }
 
+// Updated User interface to match profile data
 interface User {
   id: string
-  name: string
+  full_name: string
   email: string
   department?: string
 }
@@ -23,27 +25,75 @@ interface User {
 export default function AttendanceMonitor() {
   const [records, setRecords] = useState<(AttendanceRecord & { userName: string; userEmail: string })[]>([])
   const [expandedId, setExpandedId] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    const users = JSON.parse(localStorage.getItem("users") || "[]")
-    const attendance = JSON.parse(localStorage.getItem("attendance") || "[]")
+    const fetchData = async () => {
+      setLoading(true)
+      setError(null)
+      try {
+        // Fetch users from the API endpoint
+        const {
+          data: { session },
+        } = await supabase.auth.getSession()
+        if (!session) throw new Error("Not authenticated")
 
-    const today = new Date().toDateString()
-    const todayRecords = attendance
-      .filter((record: AttendanceRecord) => new Date(record.timestamp).toDateString() === today)
-      .map((record: AttendanceRecord) => {
-        const user = users.find((u: User) => u.id === record.userId)
-        return {
-          ...record,
-          userName: user?.name || "Unknown",
-          userEmail: user?.email || "unknown@example.com",
+        const usersResponse = await fetch('/api/users', {
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+          },
+        });
+
+        if (!usersResponse.ok) {
+          throw new Error("Failed to fetch user profiles.")
         }
-      })
-      .sort((a: any, b: any) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+        const users: User[] = await usersResponse.json()
 
-    setRecords(todayRecords)
+        // Attendance records are still from localStorage as per current design
+        const attendance = JSON.parse(localStorage.getItem("attendance") || "[]")
+
+        const today = new Date().toDateString()
+        const todayRecords = attendance
+          .filter((record: AttendanceRecord) => new Date(record.timestamp).toDateString() === today)
+          .map((record: AttendanceRecord) => {
+            const user = users.find((u: User) => u.id === record.userId)
+            return {
+              ...record,
+              userName: user?.full_name || "Unknown",
+              userEmail: user?.email || "unknown@example.com",
+            }
+          })
+          .sort((a: any, b: any) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+
+        setRecords(todayRecords)
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "An unexpected error occurred.")
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchData()
   }, [])
 
+  if (loading) {
+    return (
+      <Card className="bg-white p-8 text-center flex items-center justify-center gap-2">
+        <Loader2 className="w-5 h-5 animate-spin text-gray-500" />
+        <p className="text-gray-500">Memuat data monitor...</p>
+      </Card>
+    )
+  }
+
+  if (error) {
+     return (
+      <Card className="bg-white p-8 text-center">
+        <p className="text-red-500">{error}</p>
+      </Card>
+    )
+  }
+  
   if (records.length === 0) {
     return (
       <Card className="bg-white p-8 text-center">

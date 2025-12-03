@@ -110,7 +110,7 @@ export async function POST(request: Request) {
     // }
 
     const body = await request.json();
-    const { email, password, full_name, role, department } = body;
+    const { email, password, full_name, role, department, photo } = body;
 
     if (!email || !password || !full_name || !role) {
         return NextResponse.json({ error: "Email, password, full_name, and role are required." }, { status: 400 });
@@ -131,12 +131,42 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: authError.message }, { status: 500 });
     }
     
+    const newUserId = authData.user.id;
+    let photoUrl = null;
+
+    // Handle photo upload if present
+    if (photo) {
+      try {
+        const [header, data] = photo.split(',');
+        const mimeType = header.match(/:(.*?);/)[1];
+        const fileExt = mimeType.split('/')[1];
+        const filePath = `${newUserId}/avatar.${fileExt}`;
+        
+        const { error: uploadError } = await supabaseAdmin.storage
+          .from('avatars')
+          .upload(filePath, Buffer.from(data, 'base64'), {
+            contentType: mimeType,
+            upsert: true,
+          });
+
+        if (uploadError) throw uploadError;
+
+        const { data: { publicUrl } } = supabaseAdmin.storage
+          .from('avatars')
+          .getPublicUrl(filePath);
+        photoUrl = publicUrl;
+
+      } catch (uploadError) {
+        // Log the error but don't block user creation
+        console.error("Error uploading avatar:", uploadError);
+      }
+    }
+
     // The trigger automatically creates the profile.
     // Now, update the profile with the correct role and department.
-    const newUserId = authData.user.id;
     const { data: updatedProfile, error: profileError } = await supabaseAdmin
         .from('profiles')
-        .update({ role, department })
+        .update({ role, department, photo_url: photoUrl })
         .eq('id', newUserId)
         .select()
         .single();
