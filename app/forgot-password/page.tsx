@@ -27,7 +27,7 @@ export default function ForgotPasswordPage() {
     if (error) {
       setError(`Error: ${error.message}`)
     } else {
-      setMessage("Jika email Anda terdaftar, Anda akan menerima instruksi untuk reset password.")
+      setMessage("silahkan cek email anda untuk reset password.")
     }
   }
 

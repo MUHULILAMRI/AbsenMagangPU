@@ -2,27 +2,25 @@
 
 import type React from "react"
 import { createContext, useContext, useEffect, useState } from "react"
+import { supabase } from "@/lib/supabaseClient"
+import type { Session } from "@supabase/supabase-js"
 
-// NOTE: This is a mock authentication provider for demo purposes.
-// It uses localStorage and sessionStorage to simulate a user session.
-
+// Custom User type now includes fields from the 'profiles' table
 export interface User {
   id: string
-  name: string
-  email: string
-  role: "employee" | "admin"
+  email?: string
+  role: "admin" | "employee"
+  full_name?: string
   department?: string
-  photo?: string
-  password?: string // Password is part of the user object in localStorage
+  photo_url?: string
 }
 
 interface AuthContextType {
   user: User | null
   loading: boolean
   login: (email: string, password: string) => Promise<{ message: string } | undefined>
-  logout: () => void
+  logout: () => Promise<void>
   isAuthenticated: boolean
-  updateUserPhoto: (userId: string, photo: string) => void
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -32,86 +30,105 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // Check for a user session in sessionStorage on initial load
-    try {
-      const sessionUser = sessionStorage.getItem("sessionUser")
-      if (sessionUser) {
-        setUser(JSON.parse(sessionUser))
-      }
-    } catch (error) {
-      console.error("Failed to parse session user from sessionStorage", error)
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(
+      async (_event, session: Session | null) => {
+        if (session?.user) {
+          // DEBUGGING: Fetch profile without .single() to diagnose the issue
+          const { data: profiles, error } = await supabase
+            .from("profiles")
+            .select("*")
+            .eq("id", session.user.id)
+
+          if (error && error.message !== 'JSON object requested, multiple (or no) rows returned') {
+            console.error("DEBUG: Error fetching user profile:", error)
+            setUser(null)
+          } else if (profiles && profiles.length > 0) {
+            const profile = profiles[0]; // Use the first profile found
+            const currentUser: User = {
+              id: session.user.id,
+              email: session.user.email,
+              role: profile.role || "employee",
+              full_name: profile.full_name,
+              department: profile.department,
+              photo_url: profile.photo_url,
+            }
+            setUser(currentUser)
+          } else {
+            console.warn(`No profile found for user ID: ${session.user.id}. Attempting to create one.`)
+            const { data: newProfile, error: insertError } = await supabase
+              .from("profiles")
+              .insert([{ id: session.user.id, role: "employee" }])
+              .select()
+
+            if (insertError) {
+              console.error("DEBUG: Error creating user profile:", insertError)
+              setUser(null)
+            } else if (newProfile) {
+              const profile = newProfile[0]
+              const currentUser: User = {
+                id: session.user.id,
+                email: session.user.email,
+                role: profile.role || "employee",
+                full_name: profile.full_name,
+                department: profile.department,
+                photo_url: profile.photo_url,
+              }
+              setUser(currentUser)
+              console.log(`Successfully created and set profile for user ID: ${session.user.id}`)
+            } else {
+              console.error(`DEBUG: Failed to create or retrieve profile for user ID: ${session.user.id}.`)
+              setUser(null)
+            }
+          }
+        } else {
+          // User is logged out
+          setUser(null)
+        }
+        setLoading(false)
+      },
+    )
+
+    return () => {
+      subscription?.unsubscribe()
     }
-    setLoading(false)
   }, [])
 
+  // Login and logout functions remain the same
   const login = async (email: string, password: string) => {
-    try {
-      const usersData = localStorage.getItem("users")
-      if (!usersData) {
-        return { message: "No users found in demo data." }
+    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    if (error) {
+      if (error.message === "Invalid login credentials") {
+        return { message: "Email atau password salah." }
       }
+      return { message: error.message }
+    }
+    return undefined // Success
+  }
 
-      const users: User[] = JSON.parse(usersData)
-      const foundUser = users.find(
-        (u) => u.email === email && u.password === password,
-      )
-
-      if (foundUser) {
-        const { password, ...userToSave } = foundUser; // Don't store password in session
-        setUser(userToSave as User);
-        sessionStorage.setItem("sessionUser", JSON.stringify(userToSave))
-        return undefined // Signifies success
-      } else {
-        return { message: "Invalid login credentials" }
-      }
-    } catch (error) {
-      console.error("Login error:", error)
-      return { message: "An unexpected error occurred during login." }
+  const logout = async () => {
+    const { error } = await supabase.auth.signOut()
+    if (error) {
+      console.error("Error logging out:", error)
     }
   }
 
-  const logout = () => {
-    setUser(null)
-    sessionStorage.removeItem("sessionUser")
+  const value = {
+    user,
+    loading,
+    login,
+    logout,
+    isAuthenticated: !!user,
   }
 
-  const updateUserPhoto = (userId: string, photo: string) => {
-    // This is a mock update. It updates the user in the current session
-    // and also in the main 'users' list in localStorage.
-    if (user && user.id === userId) {
-      const updatedUser = { ...user, photo };
-      setUser(updatedUser);
-      sessionStorage.setItem("sessionUser", JSON.stringify(updatedUser));
-
-      const usersData = localStorage.getItem("users");
-      if (usersData) {
-        let users: User[] = JSON.parse(usersData);
-        users = users.map(u => u.id === userId ? { ...u, photo } : u);
-        localStorage.setItem("users", JSON.stringify(users));
-      }
-    }
-  }
-
-  return (
-    <AuthContext.Provider
-      value={{
-        user,
-        loading,
-        login,
-        logout,
-        isAuthenticated: !!user,
-        updateUserPhoto,
-      }}
-    >
-      {children}
-    </AuthContext.Provider>
-  )
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
 
 export function useAuth() {
   const context = useContext(AuthContext)
   if (context === undefined) {
-    throw new Error("useAuth must be used within AuthProvider")
+    throw new Error("useAuth must be used within an AuthProvider")
   }
   return context
 }

@@ -1,17 +1,58 @@
-    at module evaluation (.next/server/chunks/[root-of-the-server]__2b8849a9._.js:55:40724)
-    at instantiateModule (.next/server/chunks/[turbopack]_runtime.js:715:9)
-    at getOrInstantiateModuleFromParent (.next/server/chunks/[turbopack]_runtime.js:738:12)
-    at Context.esmImport [as i] (.next/server/chunks/[turbopack]_runtime.js:228:20)
-    at module evaluation (.next/server/chunks/[root-of-the-server]__f4bd177d._.js:1:1033)
-    at instantiateModule (.next/server/chunks/[turbopack]_runtime.js:715:9)
-    at instantiateRuntimeModule (.next/server/chunks/[turbopack]_runtime.js:743:12)
-    at getOrInstantiateRuntimeModule (.next/server/chunks/[turbopack]_runtime.js:756:12)
-    at Object.m (.next/server/chunks/[turbopack]_runtime.js:765:18)
-    at Object.<anonymous> (.next/server/app/api/users/[id]/route.js:5:3)
-> Build error occurred
-Error: Failed to collect page data for /api/users/[id]
-    at ignore-listed frames {
-  type: 'Error'
-}
- ELIFECYCLE  Command failed with exit code 1.
-Error: Command "pnpm run build" exited with 1
+forward-logs-shared.ts:95 Download the React DevTools for a better development experience: https://react.dev/link/react-devtools
+forward-logs-shared.ts:95 [HMR] connected
+forward-logs-shared.ts:95 [Vercel Web Analytics] Debug mode is enabled by default in development. No requests will be sent to the server.
+forward-logs-shared.ts:95 [Vercel Web Analytics] Running queued event pageview Object
+forward-logs-shared.ts:95 [Vercel Web Analytics] [pageview] http://localhost:3000/admin/users Object
+forward-logs-shared.ts:95 [Fast Refresh] rebuilding
+forward-logs-shared.ts:95 [Fast Refresh] done in 545ms
+user-management.tsx:134   POST http://localhost:3000/api/users 400 (Bad Request)
+handleSaveUser @ user-management.tsx:134
+await in handleSaveUser
+handleSubmit @ user-form.tsx:115
+executeDispatch @ react-dom-client.development.js:20541
+runWithFiberInDEV @ react-dom-client.development.js:984
+processDispatchQueue @ react-dom-client.development.js:20591
+(anonymous) @ react-dom-client.development.js:21162
+batchedUpdates$1 @ react-dom-client.development.js:3375
+dispatchEventForPluginEventSystem @ react-dom-client.development.js:20745
+dispatchEvent @ react-dom-client.development.js:25671
+dispatchDiscreteEvent @ react-dom-client.development.js:25639
+<form>
+exports.jsxDEV @ react-jsx-dev-runtime.development.js:342
+UserForm @ user-form.tsx:129
+react_stack_bottom_frame @ react-dom-client.development.js:28016
+renderWithHooksAgain @ react-dom-client.development.js:8082
+renderWithHooks @ react-dom-client.development.js:7994
+updateFunctionComponent @ react-dom-client.development.js:10499
+beginWork @ react-dom-client.development.js:12134
+runWithFiberInDEV @ react-dom-client.development.js:984
+performUnitOfWork @ react-dom-client.development.js:18995
+workLoopSync @ react-dom-client.development.js:18823
+renderRootSync @ react-dom-client.development.js:18804
+performWorkOnRoot @ react-dom-client.development.js:17833
+performSyncWorkOnRoot @ react-dom-client.development.js:20397
+flushSyncWorkAcrossRoots_impl @ react-dom-client.development.js:20239
+processRootScheduleInMicrotask @ react-dom-client.development.js:20278
+(anonymous) @ react-dom-client.development.js:20416
+<UserForm>
+exports.jsxDEV @ react-jsx-dev-runtime.development.js:342
+UserManagement @ user-management.tsx:189
+react_stack_bottom_frame @ react-dom-client.development.js:28016
+renderWithHooksAgain @ react-dom-client.development.js:8082
+renderWithHooks @ react-dom-client.development.js:7994
+updateFunctionComponent @ react-dom-client.development.js:10499
+beginWork @ react-dom-client.development.js:12134
+runWithFiberInDEV @ react-dom-client.development.js:984
+performUnitOfWork @ react-dom-client.development.js:18995
+workLoopSync @ react-dom-client.development.js:18823
+renderRootSync @ react-dom-client.development.js:18804
+performWorkOnRoot @ react-dom-client.development.js:17833
+performSyncWorkOnRoot @ react-dom-client.development.js:20397
+flushSyncWorkAcrossRoots_impl @ react-dom-client.development.js:20239
+processRootScheduleInMicrotask @ react-dom-client.development.js:20278
+(anonymous) @ react-dom-client.development.js:20416
+[NEW] Explain Console errors by using Copilot in Edge: click
+         
+         to explain an error. 
+        Learn more
+        Don't show again

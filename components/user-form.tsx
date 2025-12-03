@@ -8,8 +8,8 @@ import { Button } from "@/components/ui/button"
 import { AlertCircle, Camera } from "lucide-react"
 
 interface User {
-  id: number
-  name: string
+  id: string
+  full_name: string
   email: string
   password?: string // Password is now optional in User interface
   role: "employee" | "admin"
@@ -18,14 +18,14 @@ interface User {
 }
 
 interface UserFormProps {
-  user: User | null
+  user: Partial<User> | null
   onSave: (userData: Partial<User>) => void // Changed type here
   onCancel: () => void
 }
 
 export default function UserForm({ user, onSave, onCancel }: UserFormProps) {
   const [formData, setFormData] = useState({
-    name: user?.name || "",
+    full_name: user?.full_name || "",
     email: user?.email || "",
     password: "",
     confirmPassword: "",
@@ -39,8 +39,8 @@ export default function UserForm({ user, onSave, onCancel }: UserFormProps) {
   const validate = () => {
     const newErrors: Record<string, string> = {}
 
-    if (!formData.name.trim()) {
-      newErrors.name = "Nama harus diisi"
+    if (!formData.full_name.trim()) {
+      newErrors.full_name = "Nama harus diisi"
     }
 
     if (!formData.email.trim()) {
@@ -100,7 +100,7 @@ export default function UserForm({ user, onSave, onCancel }: UserFormProps) {
 
     try {
       const userData: Partial<User> = {
-        name: formData.name,
+        full_name: formData.full_name,
         email: formData.email,
         role: formData.role,
         department: formData.department,
@@ -154,16 +154,16 @@ export default function UserForm({ user, onSave, onCancel }: UserFormProps) {
             <label className="block text-sm font-medium text-gray-700 mb-2">Nama Lengkap</label>
             <input
               type="text"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              value={formData.full_name}
+              onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
               className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none transition ${
-                errors.name ? "border-red-500" : "border-gray-300"
+                errors.full_name ? "border-red-500" : "border-gray-300"
               }`}
               placeholder="Masukkan nama lengkap"
             />
-            {errors.name && (
+            {errors.full_name && (
               <p className="text-red-600 text-sm mt-1 flex items-center gap-1">
-                <AlertCircle className="w-3 h-3" /> {errors.name}
+                <AlertCircle className="w-3 h-3" /> {errors.full_name}
               </p>
             )}
           </div>

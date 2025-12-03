@@ -5,15 +5,17 @@ import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Plus, Edit2, Trash2, Check, Loader2 } from "lucide-react"
 import UserForm from "./user-form"
+import { supabase } from "@/lib/supabaseClient" // Import Supabase client
 
+// This interface should align with your 'profiles' table and the User interface in auth-context
 interface User {
   id: string
-  name: string
+  full_name: string
   email: string
-  password?: string // Password can be optional on the client side
+  password?: string // Password is only for creation, not for display
   role: "employee" | "admin"
   department?: string
-  photo?: string
+  photo_url?: string
 }
 
 export default function UserManagement() {
@@ -25,127 +27,135 @@ export default function UserManagement() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-
   useEffect(() => {
     loadUsers()
   }, [])
 
-  const loadUsers = () => {
-    setLoading(true);
+  const loadUsers = async () => {
+    setLoading(true)
+    setError(null)
     try {
-      const usersData = localStorage.getItem("users");
-      const users = usersData ? JSON.parse(usersData) : [];
-      setUsers(users);
+      const { data: usersData, error: fetchError } = await supabase
+        .from("profiles")
+        .select("*")
+        .order("email", { ascending: true })
+
+      if (fetchError) {
+        throw new Error(fetchError.message || "Gagal memuat data pengguna.")
+      }
+      setUsers(usersData)
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Gagal memuat data pengguna dari localStorage.");
+      setError(err instanceof Error ? err.message : "Terjadi kesalahan yang tidak terduga.")
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   const filteredUsers = users.filter(
     (user) =>
-      (user.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (user.email || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (user.department || '').toLowerCase().includes(searchTerm.toLowerCase()),
+      (user.full_name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (user.email || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (user.department || "").toLowerCase().includes(searchTerm.toLowerCase()),
   )
 
   const handleAddUser = () => {
     setEditingUser(null)
     setShowForm(true)
-    setError(null);
-    setSuccess('');
+    setError(null)
+    setSuccess("")
   }
 
   const handleEditUser = (user: User) => {
     setEditingUser(user)
     setShowForm(true)
-    setError(null);
-    setSuccess('');
+    setError(null)
+    setSuccess("")
   }
 
-  const handleAddRandomUser = () => {
+  const handleDeleteUser = async (id: string) => {
+    if (!confirm("Apakah Anda yakin ingin menghapus user ini? Aksi ini tidak dapat dibatalkan.")) {
+      return
+    }
+    setError(null);
+    setSuccess('');
+
     try {
-      const usersData = localStorage.getItem("users");
-      const users: User[] = usersData ? JSON.parse(usersData) : [];
-      
-      const randomId = Math.floor(Math.random() * 1000);
-      const newUser: User = {
-        id: `rand_${Date.now()}`,
-        name: `User Acak ${randomId}`,
-        email: `user${randomId}@example.com`,
-        password: "password123",
-        role: "employee",
-        department: "General",
-        photo: "",
-      };
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
+      if (!session) throw new Error("Not authenticated")
 
-      users.push(newUser);
-      localStorage.setItem("users", JSON.stringify(users));
+      const response = await fetch(`/api/users/${id}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      })
 
-      setSuccess(`User "${newUser.name}" berhasil ditambahkan.`);
-      loadUsers(); // Refresh the user list
+      if (!response.ok) {
+        const err = await response.json()
+        throw new Error(err.error || "Gagal menghapus user.")
+      }
+
+      setSuccess("User berhasil dihapus.")
+      loadUsers() // Refresh the user list
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Gagal menambahkan user acak.');
+      setError(err instanceof Error ? err.message : "Terjadi kesalahan saat menghapus.")
     }
-    setTimeout(() => setSuccess(''), 3000);
-  };
+    setTimeout(() => setSuccess(""), 3000)
+  }
 
-  const handleDeleteUser = (id: number | string) => {
-    if (!confirm("Apakah Anda yakin ingin menghapus user ini?")) {
-      return;
-    }
+  const handleSaveUser = async (userData: Partial<User>) => {
+    setError(null);
+    setSuccess('');
 
     try {
-      const usersData = localStorage.getItem("users");
-      let users = usersData ? JSON.parse(usersData) : [];
-      users = users.filter((user: User) => user.id !== id);
-      localStorage.setItem("users", JSON.stringify(users));
-      
-      setSuccess('User berhasil dihapus');
-      loadUsers(); // Refresh the user list
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Terjadi kesalahan saat menghapus.');
-    }
-    setTimeout(() => setSuccess(''), 3000);
-  };
-
-  const handleSaveUser = (userData: Partial<User>) => {
-    try {
-      const usersData = localStorage.getItem("users");
-      let users: User[] = usersData ? JSON.parse(usersData) : [];
-
       if (editingUser) {
-        // Edit existing user
-        users = users.map((user) =>
-          user.id === editingUser.id ? { ...user, ...userData } : user
-        );
-        setSuccess('User berhasil diperbarui');
+        // Edit existing user's profile
+        const { error: updateError } = await supabase
+          .from("profiles")
+          .update({
+            full_name: userData.full_name,
+            department: userData.department,
+            role: userData.role,
+          })
+          .eq("id", editingUser.id)
+
+        if (updateError) throw updateError
+        setSuccess("User berhasil diperbarui.")
+
       } else {
         // Add new user
-        const newUser: User = {
-          id: `user_${Date.now()}`, // Simple unique ID for demo
-          name: userData.name || '',
-          email: userData.email || '',
-          password: userData.password || 'password123', // Default password for new users
-          role: userData.role || 'employee',
-          department: userData.department || '',
-          photo: userData.photo || '',
-        };
-        users.push(newUser);
-        setSuccess('User berhasil ditambahkan');
+        const {
+          data: { session },
+        } = await supabase.auth.getSession()
+        if (!session) throw new Error("Not authenticated")
+
+        const response = await fetch("/api/users", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify(userData),
+        })
+
+        if (!response.ok) {
+          const err = await response.json()
+          throw new Error(err.error || "Gagal membuat user baru.")
+        }
+        setSuccess("User berhasil ditambahkan.")
       }
-      
-      localStorage.setItem("users", JSON.stringify(users));
-      loadUsers(); // Refresh the user list
+
+      loadUsers() // Refresh the user list
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Terjadi kesalahan saat menyimpan.');
+      setError(err instanceof Error ? err.message : "Terjadi kesalahan saat menyimpan.")
     }
 
-    setShowForm(false);
-    setEditingUser(null);
-    setTimeout(() => setSuccess(''), 3000);
-  };
+    setShowForm(false)
+    setEditingUser(null)
+    setTimeout(() => setSuccess(""), 3000)
+  }
 
   return (
     <div className="space-y-6">
@@ -155,10 +165,6 @@ export default function UserManagement() {
           <p className="text-gray-600 mt-1">Total: {users.length} user terdaftar</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button onClick={handleAddRandomUser} className="bg-green-600 hover:bg-green-700 text-white flex items-center gap-2">
-            <Plus className="w-5 h-5" />
-            Tambah Pengguna Acak
-          </Button>
           <Button onClick={handleAddUser} className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2">
             <Plus className="w-5 h-5" />
             Tambah User
@@ -172,7 +178,7 @@ export default function UserManagement() {
           <p className="text-green-700">{success}</p>
         </div>
       )}
-      
+
       {error && (
         <div className="p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3">
           <p className="text-red-700">{error}</p>
@@ -237,7 +243,7 @@ export default function UserManagement() {
                 filteredUsers.map((user) => (
                   <tr key={user.id} className="hover:bg-gray-50 transition">
                     <td className="px-6 py-4">
-                      <p className="font-medium text-gray-900">{user.name}</p>
+                      <p className="font-medium text-gray-900">{user.full_name}</p>
                     </td>
                     <td className="px-6 py-4">
                       <p className="text-gray-600 text-sm">{user.email}</p>
