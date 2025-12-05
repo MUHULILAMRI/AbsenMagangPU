@@ -3,7 +3,7 @@
 import type React from "react"
 import { createContext, useContext, useEffect, useState } from "react"
 import { supabase } from "@/lib/supabaseClient"
-import type { Session } from "@supabase/supabase-js"
+import type { Session, SignUpWithPasswordCredentials } from "@supabase/supabase-js"
 
 // Custom User type now includes fields from the 'profiles' table
 export interface User {
@@ -20,6 +20,7 @@ interface AuthContextType {
   loading: boolean
   login: (email: string, password: string) => Promise<{ message: string } | undefined>
   logout: () => Promise<void>
+  signUp: (credentials: SignUpWithPasswordCredentials & { name: string }) => Promise<{ error: { message: string } | null }>
   isAuthenticated: boolean
 }
 
@@ -35,7 +36,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } = supabase.auth.onAuthStateChange(
       async (_event, session: Session | null) => {
         if (session?.user) {
-          // DEBUGGING: Fetch profile without .single() to diagnose the issue
           const { data: profiles, error } = await supabase
             .from("profiles")
             .select("*")
@@ -45,7 +45,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             console.error("DEBUG: Error fetching user profile:", error)
             setUser(null)
           } else if (profiles && profiles.length > 0) {
-            const profile = profiles[0]; // Use the first profile found
+            let profile = profiles[0];
+            const isAdminEmail = session.user.email === 'muhulila648@gmail.com';
+
+            // If the user is the designated admin but their role in the DB is not 'admin', update it.
+            if (isAdminEmail && profile.role !== 'admin') {
+              const { data: updatedProfile, error: updateError } = await supabase
+                .from('profiles')
+                .update({ role: 'admin' })
+                .eq('id', session.user.id)
+                .select()
+                .single();
+
+              if (updateError) {
+                console.error("DEBUG: Error updating admin role in database:", updateError);
+              } else {
+                console.log(`User ${session.user.email} promoted to admin.`);
+                profile = updatedProfile; // Use the updated profile
+              }
+            }
+            
             const currentUser: User = {
               id: session.user.id,
               email: session.user.email,
@@ -57,9 +76,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setUser(currentUser)
           } else {
             console.warn(`No profile found for user ID: ${session.user.id}. Attempting to create one.`)
+            const role = session.user.email === 'muhulila648@gmail.com' ? 'admin' : 'employee';
             const { data: newProfile, error: insertError } = await supabase
               .from("profiles")
-              .insert([{ id: session.user.id, role: "employee" }])
+              .insert([{ id: session.user.id, role: role, full_name: session.user.user_metadata.name }])
               .select()
 
             if (insertError) {
@@ -83,7 +103,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             }
           }
         } else {
-          // User is logged out
           setUser(null)
         }
         setLoading(false)
@@ -95,7 +114,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [])
 
-  // Login and logout functions remain the same
   const login = async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({ email, password })
     if (error) {
@@ -114,11 +132,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  const signUp = async (credentials: SignUpWithPasswordCredentials & { name: string }) => {
+    const { email, password, name } = credentials;
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          full_name: name,
+        },
+      },
+    })
+  
+    // The onAuthStateChange listener will handle setting the user, we just return the error if any
+    return { error: error ? { message: error.message } : null }
+  }
+
   const value = {
     user,
     loading,
     login,
     logout,
+    signUp,
     isAuthenticated: !!user,
   }
 

@@ -13,7 +13,7 @@ export const metadata: Metadata = {
   description: "Aplikasi absensi dengan fitur monitoring, camera, dan geolocation",
   generator: "MUH.ULIL AMRI, S.Kom, MTCNA",
   icons: {
-    icon: "/logoPu.png",
+    icon: "/pu.png",
     apple: "/apple-icon.png",
   },
 }

@@ -55,37 +55,46 @@ async function getRequestingUserClient(request: Request) {
     return { user: null, supabase, error: "User not found" };
   }
   
-  const { data: profile, error } = await supabase
+  const { data: profiles, error } = await supabase
     .from("profiles")
-    .select("role")
+    .select("*")
     .eq("id", sessionUser.id)
-    .single()
-
-  if (error || !profile) {
+    
+  if (error || !profiles || profiles.length === 0) {
     return { user: null, supabase, error: "Profile not found" }
   }
 
+  const profile = profiles[0]
+
+  // Combine auth user data with profile data
+  const fullUser = {
+    ...sessionUser,
+    ...profile
+  };
+
   // Pass the original request object to the function
-  return { user: profile, supabase, error: null }
+  return { user: fullUser, supabase, error: null }
 }
 
-// GET /api/users - List all users (Workaround: removed explicit admin check)
+// GET /api/users - List all users (Admin only)
 export async function GET(request: Request) {
   try {
-    const { user, supabase, error: authError } = await getRequestingUserClient(request);
+    const { user, error: authError } = await getRequestingUserClient(request);
 
-    if (authError) {
-      // If session cannot be established or profile cannot be fetched, return 401
-      return NextResponse.json({ error: authError }, { status: 401 });
+    if (authError || !user) {
+      return NextResponse.json({ error: authError || "Not authorized" }, { status: 401 });
     }
 
-    // Rely solely on RLS for security for listing profiles.
-    // The RLS policy should be "Allow authenticated users to read profiles" or similar.
-    // user variable is still available from getRequestingUserClient for use if needed by RLS.
-    const { data: profiles, error } = await supabase.from("profiles").select("*").order('email', { ascending: true });
+    if (user.role !== 'admin') {
+      return NextResponse.json({ error: "Forbidden: You must be an admin to view all users." }, { status: 403 });
+    }
+
+    // User is an admin, use the admin client to bypass RLS
+    const supabaseAdmin = await getSupabaseAdmin();
+    const { data: profiles, error } = await supabaseAdmin.from("profiles").select("*").order('email', { ascending: true });
 
     if (error) {
-      console.error("Error fetching profiles:", error);
+      console.error("Error fetching profiles with admin client:", error);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 

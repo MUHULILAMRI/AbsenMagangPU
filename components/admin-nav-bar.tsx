@@ -44,7 +44,7 @@ export default function AdminNavBar() {
     <nav className="bg-white shadow-md">
       <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <img src="/logoPu.png" alt="Logo PU" className="h-10" />
+          <img src="/pu.png" alt="Logo PU" className="h-10" />
           <div>
             <h1 className="font-bold text-lg text-gray-900">Panel Admin</h1>
             <p className="text-xs text-gray-600">Sistem Manajemen Absensi Magang BPSDM PU</p>

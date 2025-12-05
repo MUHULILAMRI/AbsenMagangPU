@@ -20,7 +20,7 @@ export default function NavBar() {
     <nav className="bg-white shadow-md">
       <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <img src="/logoPu.png" alt="Logo" className="h-10" />
+          <img src="/pu.png" alt="Logo" className="h-10" />
           <div>
             <h1 className="font-bold text-lg text-gray-900">Absensi Magang BPSDM PU</h1>
             <p className="text-xs text-gray-600">{user?.role === "admin" ? "Admin" : "Peserta Magang"}</p>

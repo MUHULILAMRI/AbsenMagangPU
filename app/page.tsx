@@ -34,7 +34,7 @@ export default function Home() {
   // Only show Login Form if not loading and no user is logged in
   if (!user) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 flex items-center justify-center p-4">
+      <div className="min-h-screen w-full flex items-center justify-center bg-gray-100 p-4">
         <LoginForm />
       </div>
     )
