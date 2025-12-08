@@ -91,7 +91,7 @@ export async function GET(request: Request) {
 
     // User is an admin, use the admin client to bypass RLS
     const supabaseAdmin = await getSupabaseAdmin();
-    const { data: profiles, error } = await supabaseAdmin.from("profiles").select("*").order('email', { ascending: true });
+    const { data: profiles, error } = await supabaseAdmin.from("profiles").select("*").order('full_name', { ascending: true });
 
     if (error) {
       console.error("Error fetching profiles with admin client:", error);
