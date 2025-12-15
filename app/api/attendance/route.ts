@@ -21,7 +21,7 @@ async function getSupabaseAdmin() {
 }
 
 // Helper to get the current user and their role from their session cookie or auth token
-async function getRequestingUser(request: NextRequest) { // Changed Request to NextRequest
+async function getRequestingUser(request: NextRequest) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
@@ -56,129 +56,161 @@ async function getRequestingUser(request: NextRequest) { // Changed Request to N
     return { user: null, supabase, error: "User not found" };
   }
   
-  const { data: profile, error: profileError } = await supabase
+  // First, try to get the profile from the database
+  const { data: profile } = await supabase
     .from("profiles")
-    .select("id, role") // Fetch ID and role
+    .select("*")
     .eq("id", sessionUser.id)
-    .single()
+    .single();
+    
+  let fullUser;
 
-  if (profileError || !profile) {
-    return { user: null, supabase, error: "Profile not found or error fetching profile" }
+  if (profile) {
+    // If profile exists, combine it with the auth user
+    fullUser = {
+      ...sessionUser,
+      ...profile,
+    };
+  } else {
+    // FALLBACK: If profile is not found, check for role in user_metadata
+    const roleFromMetadata = sessionUser.user_metadata?.role;
+    if (roleFromMetadata) {
+      fullUser = {
+        ...sessionUser,
+        role: roleFromMetadata,
+        full_name: sessionUser.user_metadata?.full_name || sessionUser.email,
+        department: null,
+        photo_url: null,
+      };
+    } else {
+      // If no profile and no role in metadata, then we can't authorize
+      return { user: null, supabase, error: "Profile not found and no role in metadata" };
+    }
   }
-
-  return { user: { ...sessionUser, ...profile }, supabase, error: null }
+  
+  return { user: fullUser, supabase, error: null };
 }
 
 // POST /api/attendance - Create a new attendance record
 export async function POST(request: NextRequest) {
   try {
-    const { user: requestingUser, supabase, error: authError } = await getRequestingUser(request);
+    const { user: requestingUser, error: authError } = await getRequestingUser(request);
 
     if (authError || !requestingUser) {
       return NextResponse.json({ error: authError || "Not authenticated" }, { status: 401 });
     }
 
     const body = await request.json();
-    const { type, latitude, longitude, photo, is_late, timestamp } = body;
+    const { type, is_late, timestamp, latitude, longitude } = body;
 
-    if (!type || !latitude || !longitude || !photo || !timestamp) {
-      return NextResponse.json({ error: "Type, latitude, longitude, photo, and timestamp are required." }, { status: 400 });
+    if (!type || !timestamp || latitude === undefined || longitude === undefined) {
+      return NextResponse.json({ error: "Type, timestamp, latitude, and longitude are required." }, { status: 400 });
     }
 
-    let photoUrl = null;
-    // Handle photo upload if present
-    if (photo && photo.startsWith('data:image')) {
-      try {
-        const [header, data] = photo.split(',');
-        const mimeType = header.match(/:(.*?);/)[1];
-        const fileExt = mimeType.split('/')[1];
-        const filePath = `${requestingUser.id}/${Date.now()}.${fileExt}`; // Unique filename
-        
-        const { error: uploadError } = await supabase.storage
-          .from('attendance-photos') // Using a new bucket for attendance photos
-          .upload(filePath, Buffer.from(data, 'base64'), {
-            contentType: mimeType,
-            upsert: false, // Do not upsert, always create new
-          });
+    const supabaseAdmin = await getSupabaseAdmin();
 
-        if (uploadError) throw uploadError;
-
-        const { data: { publicUrl } } = supabase.storage
-          .from('attendance-photos')
-          .getPublicUrl(filePath);
-        photoUrl = publicUrl;
-
-      } catch (uploadError) {
-        console.error("Error uploading attendance photo:", uploadError);
-        return NextResponse.json({ error: "Failed to upload attendance photo." }, { status: 500 });
-      }
-    } else if (photo) {
-        // If photo is not a data URL, assume it's already a public URL
-        photoUrl = photo;
-    }
-
-    const { data: newRecord, error: insertError } = await supabase
+    const { data: newRecord, error: insertError } = await supabaseAdmin
       .from('attendance')
       .insert({
         user_id: requestingUser.id,
         type,
         timestamp,
+        is_late: is_late || false,
         latitude,
         longitude,
-        photo_url: photoUrl,
-        is_late: is_late || false,
       })
       .select()
       .single();
 
     if (insertError) {
       console.error("Error inserting attendance record:", insertError);
-      return NextResponse.json({ error: insertError.message }, { status: 500 });
+      return NextResponse.json({ error: `Database error: ${insertError.message}` }, { status: 500 });
     }
+
+    // --- Google Sheets Integration ---
+    try {
+      const formattedTimestamp = new Date(timestamp).toLocaleString("id-ID", {
+        dateStyle: "long",
+        timeStyle: "long",
+        timeZone: "Asia/Jakarta", // WIB
+      });
+
+      const valuesToAppend = [
+        formattedTimestamp,
+        requestingUser.full_name || "",
+        requestingUser.email || "",
+        type,
+        is_late ? "YA" : "TIDAK",
+        latitude,
+        longitude,
+      ];
+      
+      const { appendToSheet } = await import("@/lib/google-sheets");
+      await appendToSheet(valuesToAppend);
+      console.log("Successfully wrote to Google Sheet."); // Re-added success log
+
+    } catch (sheetError: any) {
+      console.error("--- Google Sheets Integration Error ---");
+      console.error("!!! FAILED TO WRITE TO GOOGLE SHEET:", sheetError.message);
+      console.error(sheetError); // Log the full error object for details
+    }
+    // --- End of Google Sheets Integration ---
 
     return NextResponse.json(newRecord, { status: 201 });
 
   } catch (e) {
     const error = e as Error;
     console.error("Unhandled error in POST /api/attendance:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: `Unhandled server error: ${error.message}` }, { status: 500 });
   }
 }
 
 // GET /api/attendance - Fetch attendance records
-// Can filter by user_id (for history) or fetch all (for monitor)
 export async function GET(request: NextRequest) {
+  console.log("--- GET /api/attendance endpoint hit ---");
   try {
     const { user: requestingUser, supabase, error: authError } = await getRequestingUser(request);
 
+    console.log(`Requesting user role: ${requestingUser?.role}, ID: ${requestingUser?.id}`);
+
     if (authError || !requestingUser) {
+      console.error("Auth error in /api/attendance:", authError);
       return NextResponse.json({ error: authError || "Not authenticated" }, { status: 401 });
     }
 
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('user_id');
-    const forAdmin = searchParams.get('for_admin') === 'true';
 
-    let query = supabase.from('attendance').select('*');
+    let query;
 
-    // If requesting user is not admin, they can only see their own records
-    if (requestingUser.role !== 'admin') {
-      query = query.eq('user_id', requestingUser.id);
+    if (requestingUser.role === 'admin' && !userId) {
+      console.log("Attempting to fetch all records with ADMIN privileges...");
+      const supabaseAdmin = await getSupabaseAdmin();
+      query = supabaseAdmin.from('attendance').select('*');
     } else {
-        // If admin, and specific user_id is requested, filter by it
-        if (userId) {
-            query = query.eq('user_id', userId);
-        }
+      console.log("Fetching records with user-scoped (RLS) client...");
+      query = supabase.from('attendance').select('*');
+      if (requestingUser.role !== 'admin') {
+        console.log(`Filtering for user_id: ${requestingUser.id}`);
+        query = query.eq('user_id', requestingUser.id);
+      } else if (userId) {
+        console.log(`Admin fetching for specific user_id: ${userId}`);
+        query = query.eq('user_id', userId);
+      }
     }
     
-    // Sort by timestamp descending
     query = query.order('timestamp', { ascending: false });
 
     const { data: records, error: fetchError } = await query;
 
     if (fetchError) {
-      console.error("Error fetching attendance records:", fetchError);
-      return NextResponse.json({ error: fetchError.message }, { status: 500 });
+      console.error("!!! Supabase fetch error in GET /api/attendance:", fetchError);
+      return NextResponse.json({ error: `Database fetch failed: ${fetchError.message}` }, { status: 500 });
+    }
+
+    console.log(`Successfully fetched ${records?.length} attendance records.`);
+    if (!records || records.length === 0) {
+      return NextResponse.json([]);
     }
 
     return NextResponse.json(records);

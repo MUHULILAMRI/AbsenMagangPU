@@ -1,35 +1,32 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useAuth } from "@/context/auth-context"
+import { supabase } from "@/lib/supabaseClient"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { AlertCircle, Camera, Clock, Loader } from "lucide-react"
-import CameraModal from "./camera-modal"
+import { AlertCircle, Clock, Loader, LogIn, LogOut, MapPin } from "lucide-react"
+import { isLate, isWithinRadius } from "@/lib/geolocation"
 import LocationDisplay from "./location-display"
-import { isWithinRadius, isLate } from "@/lib/geolocation"
 
 interface AttendanceRecord {
   id: string
-  userId: string
+  user_id: string
   type: "check-in" | "check-out"
   timestamp: string
-  location: { latitude: number; longitude: number }
-  photo: string
-  isLate?: boolean
-  notes?: string
+  is_late: boolean
+  latitude?: number
+  longitude?: number
 }
 
 export default function AttendanceCard() {
   const { user } = useAuth()
   const [currentTime, setCurrentTime] = useState<Date>(new Date())
   const [todayAttendance, setTodayAttendance] = useState<AttendanceRecord[]>([])
-  const [location, setLocation] = useState<{ latitude: number; longitude: number } | null>(null)
-  const [locationError, setLocationError] = useState<string>("")
-  const [showCamera, setShowCamera] = useState(false)
-  const [attendanceType, setAttendanceType] = useState<"check-in" | "check-out">("check-in")
-  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string>("")
+  const [loading, setLoading] = useState<"check-in" | "check-out" | null>(null)
   const [success, setSuccess] = useState("")
+  const [location, setLocation] = useState<{ latitude: number; longitude: number } | null>(null)
   const [locatingInProgress, setLocatingInProgress] = useState(false)
 
   useEffect(() => {
@@ -39,74 +36,149 @@ export default function AttendanceCard() {
     return () => clearInterval(timer)
   }, [])
 
-  useEffect(() => {
-    if (user) {
-      const today = new Date().toDateString()
-      const attendance = JSON.parse(localStorage.getItem("attendance") || "[]")
-      const todayRecords = attendance.filter(
-        (record: AttendanceRecord) => record.userId === user.id && new Date(record.timestamp).toDateString() === today,
-      )
-      setTodayAttendance(todayRecords)
-    }
-  }, [user])
+  const fetchTodayAttendance = useCallback(async () => {
+    if (!user) return
 
-  const getLocation = () => {
-    setLocationError("")
-    setLocatingInProgress(true)
-
-    if (!navigator.geolocation) {
-      setLocationError("Geolocation tidak didukung oleh browser Anda")
-      setLocatingInProgress(false)
-      return
-    }
-
-    const options = {
-      enableHighAccuracy: true,
-      timeout: 10000,
-      maximumAge: 0,
-    }
-
-    let attemptCount = 0
-    const maxAttempts = 3
-
-    const successCallback = (position: GeolocationPosition) => {
-      const { latitude, longitude } = position.coords
-
-      if (!isWithinRadius(latitude, longitude)) {
-        setLocationError(`Anda berada di luar radius kantor. Minimum radius: 100 meter dari lokasi kantor.`)
-        setLocatingInProgress(false)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        setTodayAttendance([])
         return
       }
 
-      setLocation({ latitude, longitude })
-      setLocatingInProgress(false)
-      setShowCamera(true)
-    }
+      const response = await fetch('/api/attendance', {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      })
 
-    const errorCallback = (error: GeolocationPositionError) => {
-      attemptCount++
-
-      if (attemptCount < maxAttempts) {
-        setTimeout(() => {
-          navigator.geolocation.getCurrentPosition(successCallback, errorCallback, options)
-        }, 1000)
-      } else {
-        setLocationError(
-          "Gagal mendapatkan lokasi setelah beberapa percobaan. Pastikan izin lokasi telah diberikan dan GPS aktif.",
-        )
-        setLocatingInProgress(false)
+      if (response.status === 404) {
+        setTodayAttendance([])
+        return
       }
+      if (!response.ok) {
+        const err = await response.json()
+        throw new Error(err.error || 'Gagal memuat riwayat absensi.')
+      }
+
+      const allRecords: AttendanceRecord[] = await response.json()
+      const today = new Date().toDateString()
+      const todayRecords = allRecords.filter(
+        (record) => new Date(record.timestamp).toDateString() === today
+      )
+      setTodayAttendance(todayRecords)
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Error tidak diketahui"
+      setError(msg)
+    }
+  }, [user])
+
+  useEffect(() => {
+    fetchTodayAttendance()
+  }, [fetchTodayAttendance])
+  
+  const handleAttendance = async (
+    type: "check-in" | "check-out",
+    location: { latitude: number; longitude: number }
+  ) => {
+    setLoading(type)
+    setError("")
+    setSuccess("")
+
+    if (!user) {
+      setError("Data pengguna tidak tersedia. Coba login ulang.")
+      setLoading(null)
+      return
     }
 
-    navigator.geolocation.getCurrentPosition(successCallback, errorCallback, options)
+    try {
+      const isCheckIn = type === "check-in"
+      const late = isCheckIn ? isLate() : false
+      const timestamp = new Date().toISOString()
+
+      const attendanceData = {
+        type: type,
+        is_late: late,
+        timestamp: timestamp,
+        latitude: location.latitude,
+        longitude: location.longitude,
+      }
+
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        throw new Error("Sesi tidak ditemukan, silakan login ulang.")
+      }
+
+      const response = await fetch('/api/attendance', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify(attendanceData),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Gagal menyimpan data absensi.')
+      }
+
+      const newRecord = await response.json()
+      setTodayAttendance((prevRecords) => [...prevRecords, newRecord])
+
+      const lateText = late ? " (TERLAMBAT)" : ""
+      setSuccess(`${type === "check-in" ? "Absen masuk" : "Absen pulang"} berhasil tercatat!${lateText}`)
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Terjadi kesalahan."
+      setError(errorMessage)
+    } finally {
+      setLoading(null)
+      setLocatingInProgress(false)
+      setTimeout(() => {
+        setSuccess("")
+        setError("")
+      }, 5000)
+    }
+  }
+  
+  const getLocationAndAttend = (type: "check-in" | "check-out") => {
+    setError("")
+    setSuccess("")
+    setLocatingInProgress(true)
+    setLoading(type)
+
+    if (!navigator.geolocation) {
+      setError("Geolocation tidak didukung oleh browser Anda.")
+      setLocatingInProgress(false)
+      setLoading(null)
+      return
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords
+        if (!isWithinRadius(latitude, longitude)) {
+          setError(`Anda berada di luar radius kantor. Minimum radius: 100 meter dari lokasi kantor.`)
+          setLocatingInProgress(false)
+          setLoading(null)
+          return
+        }
+        setLocation({ latitude, longitude })
+        handleAttendance(type, { latitude, longitude })
+      },
+      (error) => {
+        setError("Gagal mendapatkan lokasi. Pastikan izin lokasi aktif.")
+        setLocatingInProgress(false)
+        setLoading(null)
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    )
   }
 
+
   const handleAbsensiClick = (type: "check-in" | "check-out") => {
-    const today = new Date().toDateString()
     const hasRecordToday = todayAttendance.some((r) => r.type === type)
 
     if (hasRecordToday) {
-      setSuccess(`Anda sudah melakukan ${type === "check-in" ? "absen masuk" : "absen pulang"} hari ini`)
+      setSuccess(`Anda sudah melakukan ${type === "check-in" ? "absen masuk" : "absen pulang"} hari ini.`)
       return
     }
 
@@ -114,47 +186,12 @@ export default function AttendanceCard() {
       const now = new Date()
       const checkOutHour = 16 // 4 PM
       if (now.getHours() < checkOutHour) {
-        setLocationError(`Absen pulang hanya bisa dilakukan setelah jam ${checkOutHour}:00.`)
+        setError(`Absen pulang hanya bisa dilakukan setelah jam ${checkOutHour}:00.`)
         return
       }
     }
-
-    setAttendanceType(type)
-    setLocation(null)
-    setLocationError("")
-    getLocation()
-  }
-
-  const handlePhotoCapture = (photoBase64: string) => {
-    setShowCamera(false)
-    if (!location) {
-      setLocationError("Lokasi tidak tersedia. Coba absen lagi.")
-      return
-    }
-
-    const isCheckIn = attendanceType === "check-in"
-    const late = isCheckIn ? isLate() : false
-
-    const newRecord: AttendanceRecord = {
-      id: Date.now().toString(),
-      userId: user?.id || "",
-      type: attendanceType,
-      timestamp: new Date().toISOString(),
-      location,
-      photo: photoBase64,
-      isLate: late,
-    }
-
-    const attendance = JSON.parse(localStorage.getItem("attendance") || "[]")
-    attendance.push(newRecord)
-    localStorage.setItem("attendance", JSON.stringify(attendance))
-
-    setTodayAttendance([...todayAttendance, newRecord])
-
-    const lateText = late ? " (TERLAMBAT)" : ""
-    setSuccess(`${attendanceType === "check-in" ? "Absen masuk" : "Absen pulang"} berhasil tercatat!${lateText}`)
-
-    setTimeout(() => setSuccess(""), 3000)
+    
+    getLocationAndAttend(type)
   }
 
   const timeString = currentTime.toLocaleTimeString("id-ID")
@@ -171,14 +208,6 @@ export default function AttendanceCard() {
 
   return (
     <>
-      {showCamera && (
-        <CameraModal
-          onCapture={handlePhotoCapture}
-          onClose={() => setShowCamera(false)}
-          attendanceType={attendanceType}
-        />
-      )}
-
       <Card className="bg-white shadow-xl overflow-hidden">
         <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-8 text-white">
           <div className="text-center">
@@ -200,10 +229,10 @@ export default function AttendanceCard() {
         </div>
 
         <div className="p-6 space-y-6">
-          {locationError && (
+          {error && (
             <div className="p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3">
               <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
-              <p className="text-red-700 text-sm">{locationError}</p>
+              <p className="text-red-700 text-sm">{error}</p>
             </div>
           )}
 
@@ -215,26 +244,21 @@ export default function AttendanceCard() {
               <p className="text-green-700 text-sm">{success}</p>
             </div>
           )}
-
-          {(location || locatingInProgress) && (
-            <div className="relative">
-              {locatingInProgress && (
-                <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg flex items-start gap-3">
-                  <Loader className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5 animate-spin" />
-                  <p className="text-blue-700 text-sm">Validasi lokasi... pastikan Anda dalam radius kantor 100m</p>
-                </div>
-              )}
-              {location && <LocationDisplay location={location} />}
-            </div>
+          
+          {locatingInProgress && !success && (
+             <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg flex items-start gap-3">
+               <Loader className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5 animate-spin" />
+               <p className="text-blue-700 text-sm">Mendapatkan & memvalidasi lokasi Anda...</p>
+             </div>
           )}
 
           <div className="grid grid-cols-2 gap-4">
             <Button
               onClick={() => handleAbsensiClick("check-in")}
-              disabled={hasCheckedIn || locatingInProgress}
+              disabled={hasCheckedIn || !!loading}
               className="bg-green-600 hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-semibold py-6 rounded-lg flex items-center justify-center gap-2 transition"
             >
-              {locatingInProgress ? <Loader className="w-5 h-5 animate-spin" /> : <Camera className="w-5 h-5" />}
+              {loading === 'check-in' ? <Loader className="w-5 h-5 animate-spin" /> : <LogIn className="w-5 h-5" />}
               <span className="text-center">
                 <div>Absen Masuk</div>
                 <div className="text-xs font-normal">Jam: 07:40</div>
@@ -243,14 +267,15 @@ export default function AttendanceCard() {
 
             <Button
               onClick={() => handleAbsensiClick("check-out")}
-              disabled={hasCheckedOut || !hasCheckedIn || locatingInProgress}
+              disabled={hasCheckedOut || !hasCheckedIn || !!loading}
               className="bg-red-600 hover:bg-red-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-semibold py-6 rounded-lg flex items-center justify-center gap-2 transition"
             >
-              {locatingInProgress ? <Loader className="w-5 h-5 animate-spin" /> : <Camera className="w-5 h-5" />}
-                              <span className="text-center">
-                                <div>Absen Pulang</div>
-                                <div className="text-xs font-normal">Jam: 16:00</div>
-                              </span>            </Button>
+              {loading === 'check-out' ? <Loader className="w-5 h-5 animate-spin" /> : <LogOut className="w-5 h-5" />}
+              <span className="text-center">
+                <div>Absen Pulang</div>
+                <div className="text-xs font-normal">Jam: 16:00</div>
+              </span>
+            </Button>
           </div>
 
           <div className="pt-4 border-t border-gray-200">
@@ -267,10 +292,7 @@ export default function AttendanceCard() {
                 <span className={`font-semibold ${hasCheckedIn ? "text-green-600" : "text-gray-400"}`}>
                   {hasCheckedIn ? "✓" : "○"}{" "}
                   {hasCheckedIn
-                    ? todayAttendance
-                        .find((r) => r.type === "check-in")
-                        ?.timestamp.split("T")[1]
-                        .slice(0, 5)
+                    ? new Date(todayAttendance.find((r) => r.type === "check-in")!.timestamp).toLocaleTimeString("id-ID", { hour: '2-digit', minute: '2-digit' })
                     : "Belum"}
                 </span>
               </div>
@@ -279,10 +301,7 @@ export default function AttendanceCard() {
                 <span className={`font-semibold ${hasCheckedOut ? "text-green-600" : "text-gray-400"}`}>
                   {hasCheckedOut ? "✓" : "○"}{" "}
                   {hasCheckedOut
-                    ? todayAttendance
-                        .find((r) => r.type === "check-out")
-                        ?.timestamp.split("T")[1]
-                        .slice(0, 5)
+                    ? new Date(todayAttendance.find((r) => r.type === "check-out")!.timestamp).toLocaleTimeString("id-ID", { hour: '2-digit', minute: '2-digit' })
                     : "Belum"}
                 </span>
               </div>

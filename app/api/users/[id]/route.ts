@@ -26,47 +26,101 @@ async function getSupabaseAdmin() {
 
 // Helper to get the current user and their role from their session cookie or auth token
 async function getRequestingUser(request: Request) {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
   if (!supabaseUrl || !anonKey) {
-    throw new Error("Missing Supabase URL or Anon Key.");
+    throw new Error("Missing Supabase URL or Anon Key.")
   }
 
   const authHeader = request.headers.get('Authorization');
-  const cookieStore = cookies();
+  const cookieStore = cookies()
   const supabase = createClient(supabaseUrl, anonKey, {
     cookies: {
       getAll: () => cookieStore.getAll(),
     },
-  });
+  })
 
   let sessionUser;
 
   if (authHeader) {
-    const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error } = await supabase.auth.getUser(token);
+    const token = authHeader.replace('Bearer ', '')
+    const { data: { user }, error } = await supabase.auth.getUser(token)
     if (error || !user) {
-      return null; // Invalid token
+      return { user: null, supabase, error: "Invalid token" };
     }
     sessionUser = user;
   } else {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return null;
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) return { user: null, supabase, error: "No session" }
     sessionUser = session.user;
   }
-  
-  if (!sessionUser) {
-    return null;
-  }
 
+  if (!sessionUser) {
+    return { user: null, supabase, error: "User not found" };
+  }
+  
   const { data: profile } = await supabase
     .from("profiles")
-    .select("role")
+    .select("*")
     .eq("id", sessionUser.id)
     .single();
+    
+  let fullUser;
 
-  return profile;
+  if (profile) {
+    fullUser = { ...sessionUser, ...profile };
+  } else {
+    const roleFromMetadata = sessionUser.user_metadata?.role;
+    if (roleFromMetadata) {
+      fullUser = {
+        ...sessionUser,
+        role: roleFromMetadata,
+        full_name: sessionUser.user_metadata?.full_name || sessionUser.email,
+        department: null,
+        photo_url: null,
+      };
+    } else {
+      return { user: null, supabase, error: "Profile not found and no role in metadata" };
+    }
+  }
+  
+  return { user: fullUser, supabase, error: null };
+}
+
+export async function GET(
+  request: Request,
+  { params }: { params: { id: string } },
+) {
+  try {
+    const { user: requestingUser } = await getRequestingUser(request);
+
+    if (!requestingUser) {
+      return NextResponse.json({ error: "Not authorized" }, { status: 403 });
+    }
+
+    const { id: userIdToFetch } = params;
+    if (!userIdToFetch) {
+      return NextResponse.json({ error: "User ID is required" }, { status: 400 });
+    }
+
+    const supabaseAdmin = await getSupabaseAdmin();
+    const { data: profile, error } = await supabaseAdmin
+      .from("profiles")
+      .select("*")
+      .eq("id", userIdToFetch)
+      .single();
+
+    if (error || !profile) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    return NextResponse.json(profile);
+  } catch (e) {
+    const error = e as Error;
+    console.error("Unhandled error in GET /api/users/[id]:", error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
 }
 
 export async function PUT(
@@ -74,15 +128,20 @@ export async function PUT(
   { params }: { params: { id: string } },
 ) {
   try {
-    const requestingUser = await getRequestingUser(request);
-
-    if (!requestingUser || requestingUser.role !== "admin") {
-      return NextResponse.json({ error: "Not authorized" }, { status: 403 });
+    const { user: requestingUser, error: authError } = await getRequestingUser(request);
+    
+    if (authError || !requestingUser) {
+      return NextResponse.json({ error: authError || "Not authenticated" }, { status: 401 });
     }
 
-    const userIdToUpdate = params.id;
+    const { id: userIdToUpdate } = params;
     if (!userIdToUpdate) {
       return NextResponse.json({ error: "User ID is required" }, { status: 400 });
+    }
+
+    // Authorization check: Allow if user is an admin OR if they are updating their own profile
+    if (requestingUser.role !== "admin" && requestingUser.id !== userIdToUpdate) {
+      return NextResponse.json({ error: "Forbidden: You can only update your own profile." }, { status: 403 });
     }
 
     const body = await request.json();
@@ -90,12 +149,10 @@ export async function PUT(
     
     const updatePayload: { [key: string]: any } = {};
 
-    // Explicitly check for each field in the body before adding it to the payload.
-    // This allows setting fields to empty or null values.
     if (body.hasOwnProperty('full_name')) {
       updatePayload.full_name = body.full_name;
     }
-    if (body.hasOwnProperty('role')) {
+    if (body.hasOwnProperty('role') && requestingUser.role === 'admin') { // Only admin can change role
       updatePayload.role = body.role;
     }
     if (body.hasOwnProperty('department')) {
@@ -106,7 +163,9 @@ export async function PUT(
     if (body.photo && body.photo.startsWith('data:image')) {
       try {
         const [header, data] = body.photo.split(',');
-        const mimeType = header.match(/:(.*?);/)[1];
+        const mimeType = header.match(/:(.*?);/)?.[1];
+        if (!mimeType) throw new Error("Invalid image format.");
+        
         const fileExt = mimeType.split('/')[1];
         const filePath = `${userIdToUpdate}/avatar.${fileExt}`;
         
@@ -119,21 +178,27 @@ export async function PUT(
 
         if (uploadError) throw uploadError;
 
+        // Add a timestamp to the URL to bypass browser cache
         const { data: { publicUrl } } = supabaseAdmin.storage
           .from('avatars')
-          .getPublicUrl(filePath);
+          .getPublicUrl(filePath, {
+             transform: {
+                // This is a trick to force a cache bust
+                // You might want a more robust strategy in production
+                width: 500, 
+                height: 500,
+             }
+          });
         
-        updatePayload.photo_url = publicUrl;
+        updatePayload.photo_url = `${publicUrl}?t=${new Date().getTime()}`;
 
-      } catch (uploadError) {
+      } catch (uploadError: any) {
         console.error("Error uploading avatar during update:", uploadError);
-        return NextResponse.json({ error: "Failed to upload new photo." }, { status: 500 });
+        return NextResponse.json({ error: `Failed to upload new photo: ${uploadError.message}` }, { status: 500 });
       }
     }
 
-    // Do not proceed if the payload is empty
     if (Object.keys(updatePayload).length === 0) {
-      // Or return a 200 OK with the existing profile data
       const { data: existingProfile } = await supabaseAdmin.from('profiles').select().eq('id', userIdToUpdate).single();
       return NextResponse.json(existingProfile);
     }
@@ -161,7 +226,7 @@ export async function PUT(
 
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const requestingUser = await getRequestingUser(request);
@@ -170,7 +235,7 @@ export async function DELETE(
       return NextResponse.json({ error: "Not authorized" }, { status: 403 });
     }
 
-    const userIdToDelete = params.id;
+    const { id: userIdToDelete } = await params;
     if (!userIdToDelete) {
       return NextResponse.json({ error: "User ID is required" }, { status: 400 });
     }

@@ -3,126 +3,129 @@
 import { useState, useEffect } from "react"
 import { Card } from "@/components/ui/card"
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts"
-import { Users, Clock, CheckCircle, AlertCircle } from "lucide-react"
+import { Users, Clock, CheckCircle, AlertCircle, Loader2 } from "lucide-react"
+import { supabase } from "@/lib/supabaseClient"
 
+// Interfaces matching DB schema
 interface AttendanceRecord {
   id: string
-  userId: string
+  user_id: string
   type: "check-in" | "check-out"
   timestamp: string
-  location: { latitude: number; longitude: number }
-  photo: string
-  isLate?: boolean
+  is_late?: boolean
 }
 
 interface User {
   id: string
-  name: string
+  full_name: string
   email: string
   role: "employee" | "admin"
   department?: string
-  photo?: string
 }
 
+// Interfaces for processed data
+interface Stats {
+  totalEmployees: number
+  totalPresent: number
+  totalLate: number
+  attendanceRate: number
+}
+interface DayData { date: string; total: number }
+interface DeptData { name: string; hadir: number; total: number; persentase: number }
+interface StatusData { name: string; value: number; fill: string }
+
+
 export default function AnalyticsDashboard() {
-  const [attendance, setAttendance] = useState<AttendanceRecord[]>([])
-  const [users, setUsers] = useState<User[]>([])
-  const [stats, setStats] = useState({
-    totalEmployees: 0,
-    totalAbsent: 0,
-    totalLate: 0,
-    attendanceRate: 0,
-  })
+  const [stats, setStats] = useState<Stats>({ totalEmployees: 0, totalPresent: 0, totalLate: 0, attendanceRate: 0, })
+  const [attendanceByDay, setAttendanceByDay] = useState<DayData[]>([])
+  const [departmentData, setDepartmentData] = useState<DeptData[]>([])
+  const [statusData, setStatusData] = useState<StatusData[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    const attendanceData = JSON.parse(localStorage.getItem("attendance") || "[]")
-    const usersData = JSON.parse(localStorage.getItem("users") || "[]")
+    const fetchAndProcessData = async () => {
+      setLoading(true)
+      setError(null)
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        if (!session) throw new Error("Not authenticated")
 
-    setAttendance(attendanceData)
-    setUsers(usersData.filter((u: User) => u.role === "employee"))
+        const [usersResponse, attendanceResponse] = await Promise.all([
+          fetch('/api/users', { headers: { Authorization: `Bearer ${session.access_token}` } }),
+          fetch('/api/attendance', { headers: { Authorization: `Bearer ${session.access_token}` } }),
+        ]);
 
-    // Calculate statistics
-    const totalEmployees = usersData.filter((u: User) => u.role === "employee").length
-    const today = new Date().toDateString()
-    const todayAbsent = attendanceData.filter(
-      (r: AttendanceRecord) => r.type === "check-in" && new Date(r.timestamp).toDateString() === today,
-    )
-    const totalLate = todayAbsent.filter((r: AttendanceRecord) => r.isLate).length
-    const attendanceRate = totalEmployees > 0 ? Math.round((todayAbsent.length / totalEmployees) * 100) : 0
+        if (!usersResponse.ok) throw new Error("Gagal memuat pengguna.")
+        
+        const users: User[] = await usersResponse.json()
+        const attendance: AttendanceRecord[] = attendanceResponse.ok ? await attendanceResponse.json() : []
+        
+        const employees = users.filter((u) => u.role === "employee")
+        const today = new Date().toDateString()
 
-    setStats({
-      totalEmployees,
-      totalAbsent: todayAbsent.length,
-      totalLate,
-      attendanceRate,
-    })
+        // --- STATS CALCULATION ---
+        const todayCheckIns = attendance.filter(
+          (r) => r.type === "check-in" && new Date(r.timestamp).toDateString() === today,
+        )
+        const totalLate = todayCheckIns.filter((r) => r.is_late).length
+        const attendanceRate = employees.length > 0 ? Math.round((todayCheckIns.length / employees.length) * 100) : 0
+        setStats({
+          totalEmployees: employees.length,
+          totalPresent: todayCheckIns.length,
+          totalLate,
+          attendanceRate,
+        })
+        
+        // --- ATTENDANCE BY DAY CALCULATION ---
+        const dayData: Record<string, number> = {}
+        attendance.filter((r) => r.type === "check-in").forEach((r) => {
+          const date = new Date(r.timestamp).toLocaleDateString("id-ID")
+          dayData[date] = (dayData[date] || 0) + 1
+        })
+        setAttendanceByDay(Object.entries(dayData).map(([date, count]) => ({ date, total: count })).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()).slice(-7))
+
+        // --- DEPARTMENT DATA CALCULATION ---
+        const deptData: Record<string, { present: number; total: number }> = {}
+        employees.forEach((u) => {
+          const dept = u.department || "Tidak Ada"
+          if (!deptData[dept]) deptData[dept] = { present: 0, total: 0 }
+          deptData[dept].total += 1
+          if (todayCheckIns.some((r) => r.user_id === u.id)) {
+            deptData[dept].present += 1
+          }
+        })
+        setDepartmentData(Object.entries(deptData).map(([dept, data]) => ({ name: dept, hadir: data.present, total: data.total, persentase: data.total > 0 ? Math.round((data.present / data.total) * 100) : 0, })))
+
+        // --- STATUS DATA CALCULATION ---
+        const present = todayCheckIns.length
+        const absent = employees.length - present
+        setStatusData([
+          { name: "Hadir", value: present, fill: "#10b981" },
+          { name: "Tidak Hadir", value: absent, fill: "#ef4444" },
+        ])
+
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Terjadi kesalahan")
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchAndProcessData()
   }, [])
 
-  const getAttendanceByDay = () => {
-    const dayData: Record<string, number> = {}
-
-    attendance
-      .filter((r) => r.type === "check-in")
-      .forEach((r) => {
-        const date = new Date(r.timestamp).toLocaleDateString("id-ID")
-        dayData[date] = (dayData[date] || 0) + 1
-      })
-
-    return Object.entries(dayData)
-      .map(([date, count]) => ({ date, total: count }))
-      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-      .slice(-7)
+  if (loading) {
+      return <div><Loader2 className="animate-spin" /> Memuat data analitik...</div>
   }
-
-  const getDepartmentData = () => {
-    const deptData: Record<string, { present: number; total: number }> = {}
-
-    users.forEach((u) => {
-      const dept = u.department || "Tidak Ada"
-      if (!deptData[dept]) {
-        deptData[dept] = { present: 0, total: 0 }
-      }
-      deptData[dept].total += 1
-
-      const today = new Date().toDateString()
-      const presentToday = attendance.some(
-        (r) => r.userId === u.id && r.type === "check-in" && new Date(r.timestamp).toDateString() === today,
-      )
-      if (presentToday) {
-        deptData[dept].present += 1
-      }
-    })
-
-    return Object.entries(deptData).map(([dept, data]) => ({
-      name: dept,
-      hadir: data.present,
-      total: data.total,
-      persentase: data.total > 0 ? Math.round((data.present / data.total) * 100) : 0,
-    }))
+  if (error) {
+      return <div className="text-red-500">Error: {error}</div>
   }
-
-  const getStatusData = () => {
-    const today = new Date().toDateString()
-    const totalEmployees = users.length
-    const present = attendance.filter(
-      (r) => r.type === "check-in" && new Date(r.timestamp).toDateString() === today,
-    ).length
-    const absent = totalEmployees - present
-
-    return [
-      { name: "Hadir", value: present, fill: "#10b981" },
-      { name: "Tidak Hadir", value: absent, fill: "#ef4444" },
-    ]
-  }
-
-  const attendanceByDay = getAttendanceByDay()
-  const departmentData = getDepartmentData()
-  const statusData = getStatusData()
 
   return (
     <div className="space-y-8">
       <h1 className="text-3xl font-bold text-gray-900">Dashboard Analitik</h1>
 
+      {/* Stat Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <Card className="bg-white p-6 shadow-lg">
           <div className="flex items-center justify-between">
@@ -133,17 +136,15 @@ export default function AnalyticsDashboard() {
             <Users className="w-12 h-12 text-blue-600 opacity-10" />
           </div>
         </Card>
-
         <Card className="bg-white p-6 shadow-lg">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-gray-600 text-sm font-medium">Hadir Hari Ini</p>
-              <p className="text-3xl font-bold text-green-600 mt-2">{stats.totalAbsent}</p>
+              <p className="text-3xl font-bold text-green-600 mt-2">{stats.totalPresent}</p>
             </div>
             <CheckCircle className="w-12 h-12 text-green-600 opacity-10" />
           </div>
         </Card>
-
         <Card className="bg-white p-6 shadow-lg">
           <div className="flex items-center justify-between">
             <div>
@@ -153,7 +154,6 @@ export default function AnalyticsDashboard() {
             <AlertCircle className="w-12 h-12 text-red-600 opacity-10" />
           </div>
         </Card>
-
         <Card className="bg-white p-6 shadow-lg">
           <div className="flex items-center justify-between">
             <div>
@@ -173,36 +173,23 @@ export default function AnalyticsDashboard() {
             <BarChart data={attendanceByDay}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="date" />
-              <YAxis />
+              <YAxis allowDecimals={false}/>
               <Tooltip />
               <Bar dataKey="total" fill="#3b82f6" />
             </BarChart>
           </ResponsiveContainer>
         </Card>
-
         <Card className="bg-white p-6 shadow-lg">
           <h3 className="text-lg font-bold text-gray-900 mb-4">Status Kehadiran Hari Ini</h3>
           <ResponsiveContainer width="100%" height={300}>
             <PieChart>
-              <Pie
-                data={statusData}
-                cx="50%"
-                cy="50%"
-                labelLine={false}
-                label={({ name, value }) => `${name}: ${value}`}
-                outerRadius={80}
-                fill="#8884d8"
-                dataKey="value"
-              >
-                {statusData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.fill} />
-                ))}
+              <Pie data={statusData} cx="50%" cy="50%" labelLine={false} label={({ name, value }) => `${name}: ${value}`} outerRadius={80} fill="#8884d8" dataKey="value">
+                {statusData.map((entry, index) => (<Cell key={`cell-${index}`} fill={entry.fill} />))}
               </Pie>
               <Tooltip />
             </PieChart>
           </ResponsiveContainer>
         </Card>
-
         <Card className="bg-white p-6 shadow-lg col-span-full">
           <h3 className="text-lg font-bold text-gray-900 mb-4">Kehadiran per Departemen</h3>
           <div className="overflow-x-auto">
@@ -219,16 +206,10 @@ export default function AnalyticsDashboard() {
                 {departmentData.map((dept, idx) => (
                   <tr key={idx} className="hover:bg-gray-50">
                     <td className="px-4 py-3 text-gray-900 font-medium">{dept.name}</td>
-                    <td className="px-4 py-3">
-                      <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-semibold">
-                        {dept.hadir}
-                      </span>
-                    </td>
+                    <td className="px-4 py-3"><span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-semibold">{dept.hadir}</span></td>
                     <td className="px-4 py-3 text-gray-600">{dept.total}</td>
                     <td className="px-4 py-3">
-                      <div className="w-24 bg-gray-200 rounded-full h-2">
-                        <div className="bg-blue-600 h-2 rounded-full" style={{ width: `${dept.persentase}%` }}></div>
-                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2"><div className="bg-blue-600 h-2 rounded-full" style={{ width: `${dept.persentase}%` }}></div></div>
                       <span className="text-sm text-gray-600 ml-2">{dept.persentase}%</span>
                     </td>
                   </tr>

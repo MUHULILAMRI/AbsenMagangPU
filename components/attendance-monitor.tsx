@@ -2,19 +2,21 @@
 
 import { useEffect, useState } from "react"
 import { Card } from "@/components/ui/card"
-import { Clock, MapPin, Camera, ChevronDown, Loader2 } from "lucide-react"
+import { Clock, MapPin, ChevronDown, Loader2 } from "lucide-react"
 import { supabase } from "@/lib/supabaseClient" // Import supabase for session
 
+// Interface to match the 'attendance' table schema
 interface AttendanceRecord {
   id: string
-  userId: string
+  user_id: string
   type: "check-in" | "check-out"
   timestamp: string
-  location: { latitude: number; longitude: number }
-  photo: string
+  is_late: boolean
+  latitude?: number
+  longitude?: number
 }
 
-// Updated User interface to match profile data
+// User interface to match 'profiles' table data
 interface User {
   id: string
   full_name: string
@@ -22,8 +24,11 @@ interface User {
   department?: string
 }
 
+// Combined type for the component's state
+type RichAttendanceRecord = AttendanceRecord & { userName: string; userEmail: string }
+
 export default function AttendanceMonitor() {
-  const [records, setRecords] = useState<(AttendanceRecord & { userName: string; userEmail: string })[]>([])
+  const [records, setRecords] = useState<RichAttendanceRecord[]>([])
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -33,40 +38,47 @@ export default function AttendanceMonitor() {
       setLoading(true)
       setError(null)
       try {
-        // Fetch users from the API endpoint
         const {
           data: { session },
         } = await supabase.auth.getSession()
         if (!session) throw new Error("Not authenticated")
 
-        const usersResponse = await fetch('/api/users', {
-          headers: {
-            Authorization: `Bearer ${session.access_token}`,
-          },
-        });
+        // Fetch both users and attendance records in parallel
+        const [usersResponse, attendanceResponse] = await Promise.all([
+          fetch('/api/users', {
+            headers: { Authorization: `Bearer ${session.access_token}` },
+          }),
+          fetch('/api/attendance', {
+            headers: { Authorization: `Bearer ${session.access_token}` },
+          }),
+        ]);
 
         if (!usersResponse.ok) {
           throw new Error("Failed to fetch user profiles.")
         }
-        const users: User[] = await usersResponse.json()
+        if (attendanceResponse.status === 404) {
+          setRecords([])
+        } else if (!attendanceResponse.ok) {
+          throw new Error("Failed to fetch attendance records.")
+        } else {
+          const users: User[] = await usersResponse.json()
+          const attendance: AttendanceRecord[] = await attendanceResponse.json()
 
-        // Attendance records are still from localStorage as per current design
-        const attendance = JSON.parse(localStorage.getItem("attendance") || "[]")
+          const today = new Date().toDateString()
+          const todayRecords = attendance
+            .filter((record) => new Date(record.timestamp).toDateString() === today)
+            .map((record) => {
+              const user = users.find((u) => u.id === record.user_id)
+              return {
+                ...record,
+                userName: user?.full_name || "Unknown User",
+                userEmail: user?.email || "No email",
+              }
+            })
+            .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
 
-        const today = new Date().toDateString()
-        const todayRecords = attendance
-          .filter((record: AttendanceRecord) => new Date(record.timestamp).toDateString() === today)
-          .map((record: AttendanceRecord) => {
-            const user = users.find((u: User) => u.id === record.userId)
-            return {
-              ...record,
-              userName: user?.full_name || "Unknown",
-              userEmail: user?.email || "unknown@example.com",
-            }
-          })
-          .sort((a: any, b: any) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-
-        setRecords(todayRecords)
+          setRecords(todayRecords)
+        }
       } catch (err) {
         setError(err instanceof Error ? err.message : "An unexpected error occurred.")
       } finally {
@@ -75,6 +87,47 @@ export default function AttendanceMonitor() {
     }
 
     fetchData()
+
+    const channel = supabase
+      .channel("attendance_changes")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "attendance" },
+        async (payload) => {
+          const newRecord = payload.new as AttendanceRecord
+          const today = new Date().toDateString()
+
+          if (new Date(newRecord.timestamp).toDateString() === today) {
+            try {
+              const {
+                data: { session },
+              } = await supabase.auth.getSession()
+              if (!session) return
+
+              const usersResponse = await fetch(`/api/users/${newRecord.user_id}`, {
+                headers: { Authorization: `Bearer ${session.access_token}` },
+              })
+
+              if (usersResponse.ok) {
+                const user: User = await usersResponse.json()
+                const richNewRecord: RichAttendanceRecord = {
+                  ...newRecord,
+                  userName: user.full_name || "Unknown User",
+                  userEmail: user.email || "No email",
+                }
+                setRecords((prevRecords) => [richNewRecord, ...prevRecords])
+              }
+            } catch (error) {
+              console.error("Error fetching user for new record:", error)
+            }
+          }
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
   }, [])
 
   if (loading) {
@@ -131,11 +184,13 @@ export default function AttendanceMonitor() {
                     {record.type === "check-in" ? "Masuk" : "Pulang"}
                   </span>
                 </div>
-                <ChevronDown
-                  className={`w-5 h-5 text-gray-400 transition-transform ${
-                    expandedId === record.id ? "transform rotate-180" : ""
-                  }`}
-                />
+                {record.latitude && record.longitude && (
+                  <ChevronDown
+                    className={`w-5 h-5 text-gray-400 transition-transform ${
+                      expandedId === record.id ? "transform rotate-180" : ""
+                    }`}
+                  />
+                )}
               </div>
 
               <div className="flex items-center gap-4 text-sm text-gray-600">
@@ -147,35 +202,23 @@ export default function AttendanceMonitor() {
               </div>
             </div>
 
-            {expandedId === record.id && (
+            {expandedId === record.id && record.latitude && record.longitude && (
               <div className="px-4 pb-4 bg-gray-50 border-t border-gray-200">
                 <div className="space-y-4 mt-4">
                   <div className="flex items-start gap-3">
                     <MapPin className="w-4 h-4 text-gray-600 mt-1 flex-shrink-0" />
                     <div className="text-sm">
                       <p className="font-medium text-gray-900 mb-1">Lokasi</p>
-                      <p className="text-gray-600 text-xs">Latitude: {record.location.latitude.toFixed(6)}</p>
-                      <p className="text-gray-600 text-xs">Longitude: {record.location.longitude.toFixed(6)}</p>
+                      <p className="text-gray-600 text-xs">Latitude: {record.latitude.toFixed(6)}</p>
+                      <p className="text-gray-600 text-xs">Longitude: {record.longitude.toFixed(6)}</p>
                       <a
-                        href={`https://maps.google.com/?q=${record.location.latitude},${record.location.longitude}`}
+                        href={`https://maps.google.com/?q=${record.latitude},${record.longitude}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-blue-600 hover:text-blue-700 text-xs mt-2 inline-block underline"
                       >
                         Buka di Google Maps
                       </a>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-3">
-                    <Camera className="w-4 h-4 text-gray-600 mt-1 flex-shrink-0" />
-                    <div className="text-sm w-full">
-                      <p className="font-medium text-gray-900 mb-2">Foto Absensi</p>
-                      <img
-                        src={record.photo || "/placeholder.svg"}
-                        alt="Attendance photo"
-                        className="w-full max-w-xs rounded-lg border border-gray-300"
-                      />
                     </div>
                   </div>
                 </div>

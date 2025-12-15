@@ -20,7 +20,7 @@ async function getSupabaseAdmin() {
 }
 
 // Helper to get the current user and their role from their session cookie or auth token
-async function getRequestingUserClient(request: Request) {
+async function getRequestingUser(request: Request) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
@@ -55,40 +55,62 @@ async function getRequestingUserClient(request: Request) {
     return { user: null, supabase, error: "User not found" };
   }
   
-  const { data: profiles, error } = await supabase
+  // First, try to get the profile from the database
+  const { data: profile } = await supabase
     .from("profiles")
     .select("*")
     .eq("id", sessionUser.id)
+    .single();
     
-  if (error || !profiles || profiles.length === 0) {
-    return { user: null, supabase, error: "Profile not found" }
+  let fullUser;
+
+  if (profile) {
+    // If profile exists, combine it with the auth user
+    fullUser = {
+      ...sessionUser,
+      ...profile,
+    };
+  } else {
+    // FALLBACK: If profile is not found, check for role in user_metadata
+    // This handles cases where a profile might be missing, especially for the admin
+    const roleFromMetadata = sessionUser.user_metadata?.role;
+    if (roleFromMetadata) {
+      fullUser = {
+        ...sessionUser,
+        role: roleFromMetadata,
+        // Add other fields as null or default if needed
+        full_name: sessionUser.user_metadata?.full_name || sessionUser.email,
+        department: null,
+        photo_url: null,
+      };
+    } else {
+      // If no profile and no role in metadata, then we can't authorize
+      return { user: null, supabase, error: "Profile not found and no role in metadata" };
+    }
   }
-
-  const profile = profiles[0]
-
-  // Combine auth user data with profile data
-  const fullUser = {
-    ...sessionUser,
-    ...profile
-  };
-
-  // Pass the original request object to the function
-  return { user: fullUser, supabase, error: null }
+  
+  return { user: fullUser, supabase, error: null };
 }
 
 // GET /api/users - List all users (Admin only)
 export async function GET(request: Request) {
+  console.log("--- GET /api/users endpoint hit ---");
   try {
-    const { user, error: authError } = await getRequestingUserClient(request);
+    const { user, error: authError } = await getRequestingUser(request);
+
+    console.log("Requesting user role:", user?.role);
 
     if (authError || !user) {
+      console.error("Auth error in /api/users:", authError);
       return NextResponse.json({ error: authError || "Not authorized" }, { status: 401 });
     }
 
     if (user.role !== 'admin') {
+      console.warn(`Forbidden access attempt to /api/users by user ID: ${user.id}`);
       return NextResponse.json({ error: "Forbidden: You must be an admin to view all users." }, { status: 403 });
     }
 
+    console.log("User is admin. Proceeding to fetch all profiles.");
     // User is an admin, use the admin client to bypass RLS
     const supabaseAdmin = await getSupabaseAdmin();
     const { data: profiles, error } = await supabaseAdmin.from("profiles").select("*").order('full_name', { ascending: true });
@@ -98,6 +120,7 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
+    console.log(`Successfully fetched ${profiles?.length} profiles.`);
     return NextResponse.json(profiles);
   } catch (e) {
     const error = e as Error;
@@ -109,7 +132,7 @@ export async function GET(request: Request) {
 // POST /api/users - Create a new user
 export async function POST(request: Request) {
    try {
-    const { user: requestingUser } = await getRequestingUserClient(request);
+    const { user: requestingUser } = await getRequestingUser(request);
     
     // Debugging: Log the role of the user making the request
     console.log("REQUESTING USER ROLE:", requestingUser);
@@ -132,7 +155,7 @@ export async function POST(request: Request) {
       email,
       password,
       email_confirm: true, // Auto-confirm the email
-      user_metadata: { full_name }, // This will be picked up by the trigger
+      user_metadata: { full_name, role }, // Also store role in metadata as a fallback
     });
 
     if (authError) {
