@@ -22,6 +22,7 @@ interface AuthContextType {
   logout: () => Promise<void>
   signUp: (credentials: SignUpWithPasswordCredentials & { name: string }) => Promise<{ error: { message: string } | null }>
   isAuthenticated: boolean
+  mutate: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -30,96 +31,53 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
 
+  const fetchUserProfile = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.user) {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", session.user.id)
+        .single();
+      
+      if (profile) {
+        return {
+          id: session.user.id,
+          email: session.user.email,
+          role: profile.role,
+          full_name: profile.full_name,
+          department: profile.department,
+          photo_url: profile.photo_url,
+        };
+      }
+    }
+    return null;
+  };
+
   useEffect(() => {
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(
-      async (_event, session: Session | null) => {
-        try {
-          if (session?.user) {
-            const { data: profiles, error } = await supabase
-              .from("profiles")
-              .select("*")
-              .eq("id", session.user.id);
+    const initializeUser = async () => {
+      const userProfile = await fetchUserProfile();
+      setUser(userProfile);
+      setLoading(false);
+    };
 
-            if (error && error.message !== 'JSON object requested, multiple (or no) rows returned') {
-              console.error("DEBUG: Error fetching user profile:", error);
-              setUser(null);
-            } else if (profiles && profiles.length > 0) {
-              let profile = profiles[0];
-              const isAdminEmail = session.user.email === 'muhulila648@gmail.com';
+    initializeUser();
 
-              // If the user is the designated admin but their role in the DB is not 'admin', update it.
-              if (isAdminEmail && profile.role !== 'admin') {
-                const { data: updatedProfile, error: updateError } = await supabase
-                  .from('profiles')
-                  .update({ role: 'admin' })
-                  .eq('id', session.user.id)
-                  .select()
-                  .single();
-
-                if (updateError) {
-                  console.error("DEBUG: Error updating admin role in database:", updateError);
-                } else {
-                  console.log(`User ${session.user.email} promoted to admin.`);
-                  profile = updatedProfile; // Use the updated profile
-                }
-              }
-              
-              const currentUser: User = {
-                id: session.user.id,
-                email: session.user.email,
-                role: profile.role || "employee",
-                full_name: profile.full_name,
-                department: profile.department,
-                photo_url: profile.photo_url,
-              };
-              setUser(currentUser);
-            } else {
-              console.warn(`No profile found for user ID: ${session.user.id}. Attempting to create one.`);
-              const role = session.user.email === 'muhulila648@gmail.com' ? 'admin' : 'employee';
-              const { data: newProfile, error: insertError } = await supabase
-                .from("profiles")
-                .insert([{ id: session.user.id, role: role, full_name: session.user.user_metadata.name }])
-                .select();
-
-              if (insertError) {
-                console.error("DEBUG: Error creating user profile:", insertError);
-                setUser(null);
-              } else if (newProfile) {
-                const profile = newProfile[0];
-                const currentUser: User = {
-                  id: session.user.id,
-                  email: session.user.email,
-                  role: profile.role || "employee",
-                  full_name: profile.full_name,
-                  department: profile.department,
-                  photo_url: profile.photo_url,
-                };
-                setUser(currentUser);
-                console.log(`Successfully created and set profile for user ID: ${session.user.id}`);
-              } else {
-                console.error(`DEBUG: Failed to create or retrieve profile for user ID: ${session.user.id}.`);
-                setUser(null);
-              }
-            }
-          } else {
-            setUser(null);
-          }
-        } catch (error) {
-            console.error("Error in onAuthStateChange handler:", error);
-            setUser(null);
-        } finally {
-            setLoading(false);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event) => {
+        if (event === 'SIGNED_IN' || event === 'USER_UPDATED' || event === 'TOKEN_REFRESHED') {
+          initializeUser();
+        } else if (event === 'SIGNED_OUT') {
+          setUser(null);
         }
-      },
+      }
     );
 
     return () => {
-      subscription?.unsubscribe();
+      subscription.unsubscribe();
     };
   }, []);
-
+  
   const login = async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({ email, password })
     if (error) {
@@ -132,10 +90,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const logout = async () => {
-    const { error } = await supabase.auth.signOut()
-    if (error) {
-      console.error("Error logging out:", error)
-    }
+    await supabase.auth.signOut()
+    setUser(null);
   }
 
   const signUp = async (credentials: SignUpWithPasswordCredentials & { name: string }) => {
@@ -146,13 +102,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       options: {
         data: {
           full_name: name,
+          role: 'employee',
         },
       },
     })
-  
-    // The onAuthStateChange listener will handle setting the user, we just return the error if any
     return { error: error ? { message: error.message } : null }
   }
+
+  const mutate = async () => {
+    const userProfile = await fetchUserProfile();
+    setUser(userProfile);
+  };
 
   const value = {
     user,
@@ -161,6 +121,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     logout,
     signUp,
     isAuthenticated: !!user,
+    mutate,
   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
