@@ -127,7 +127,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: `Database error: ${insertError.message}` }, { status: 500 });
     }
 
-    // --- Google Sheets Integration ---
+    // --- Google Sheets Integration (DEBUG MODE) ---
     try {
       const formattedTimestamp = new Date(timestamp).toLocaleString("id-ID", {
         dateStyle: "long",
@@ -147,12 +147,13 @@ export async function POST(request: NextRequest) {
       
       const { appendToSheet } = await import("@/lib/google-sheets");
       await appendToSheet(valuesToAppend);
-      console.log("Successfully wrote to Google Sheet."); // Re-added success log
 
     } catch (sheetError: any) {
-      console.error("--- Google Sheets Integration Error ---");
-      console.error("!!! FAILED TO WRITE TO GOOGLE SHEET:", sheetError.message);
-      console.error(sheetError); // Log the full error object for details
+      // Return a specific error response if sheet writing fails
+      return NextResponse.json({ 
+        error: "Absensi TERSIMPAN di database, tetapi GAGAL menulis ke Google Sheet. Detail:",
+        googleSheetError: sheetError,
+      }, { status: 500 });
     }
     // --- End of Google Sheets Integration ---
 

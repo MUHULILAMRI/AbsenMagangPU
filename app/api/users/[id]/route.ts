@@ -127,6 +127,7 @@ export async function PUT(
   request: Request,
   { params }: { params: { id: string } },
 ) {
+  console.log("PUT /api/users/[id] received params:", params); // Logging untuk debugging
   try {
     const { user: requestingUser, error: authError } = await getRequestingUser(request);
     
@@ -226,7 +227,7 @@ export async function PUT(
 
 export async function DELETE(
   request: Request,
-  { params }: { params: Promise<{ id: string }> },
+  { params }: { params: { id: string } },
 ) {
   try {
     const requestingUser = await getRequestingUser(request);

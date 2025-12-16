@@ -107,7 +107,7 @@ export default function ProfileForm() {
         <CardContent className="space-y-6">
           <div className="flex flex-col items-center space-y-4">
             <Avatar className="h-32 w-32">
-              <AvatarImage src={preview || user?.photo_url || undefined} alt={user?.full_name || "User"} />
+              <AvatarImage src={preview || user?.photo_url || undefined} alt={user?.full_name || "User"} className="object-cover" />
               <AvatarFallback className="text-4xl">
                 {getInitials(user?.full_name)}
               </AvatarFallback>

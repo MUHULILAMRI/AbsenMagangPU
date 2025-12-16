@@ -56,7 +56,7 @@ export default function NavBar() {
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="relative h-10 w-10 rounded-full">
                   <Avatar className="h-10 w-10">
-                    <AvatarImage src={user?.photo_url || ''} alt={user?.full_name || ''} />
+                    <AvatarImage src={user?.photo_url || ''} alt={user?.full_name || ''} className="object-cover" />
                     <AvatarFallback>{getInitials(user?.full_name)}</AvatarFallback>
                   </Avatar>
                 </Button>
@@ -94,7 +94,7 @@ export default function NavBar() {
             <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
               <div className="flex items-center px-4 py-2">
                   <Avatar className="h-10 w-10">
-                    <AvatarImage src={user?.photo_url || ''} alt={user?.full_name || ''} />
+                    <AvatarImage src={user?.photo_url || ''} alt={user?.full_name || ''} className="object-cover" />
                     <AvatarFallback>{getInitials(user?.full_name)}</AvatarFallback>
                   </Avatar>
                 <div className="ml-3">

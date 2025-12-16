@@ -26,16 +26,24 @@ async function getGoogleAuth() {
   } else {
     // Lingkungan Pengembangan (Lokal)
     const keyFilePath = path.join(cwd(), "credentials.json");
-    // Pastikan file ada sebelum melanjutkan
     try {
       await fs.access(keyFilePath);
+      const credentialsJson = await fs.readFile(keyFilePath, "utf-8");
+      const credentials = JSON.parse(credentialsJson);
+      
+      // Perbaikan penting: Pastikan format private_key benar
+      if (credentials.private_key) {
+        credentials.private_key = credentials.private_key.replace(/\\n/g, '\n');
+      }
+
+      return new google.auth.GoogleAuth({
+        credentials,
+        scopes: SCOPES,
+      });
     } catch (error) {
-      throw new Error("File credentials.json tidak ditemukan di root direktori proyek. Harap unduh dari Google Cloud Console.");
+      console.error("Error reading or parsing credentials.json:", error);
+      throw new Error("File credentials.json tidak ditemukan atau rusak di root direktori proyek.");
     }
-    return new google.auth.GoogleAuth({
-      keyFile: keyFilePath,
-      scopes: SCOPES,
-    });
   }
 }
 
