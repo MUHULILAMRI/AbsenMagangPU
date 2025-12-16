@@ -31,8 +31,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
 
-  const fetchUserProfile = async () => {
-    const { data: { session } } = await supabase.auth.getSession();
+  const fetchAndSetUser = async (session: Session | null) => {
     if (session?.user) {
       const { data: profile } = await supabase
         .from("profiles")
@@ -41,35 +40,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .single();
       
       if (profile) {
-        return {
+        setUser({
           id: session.user.id,
           email: session.user.email,
           role: profile.role,
           full_name: profile.full_name,
           department: profile.department,
           photo_url: profile.photo_url,
-        };
+        });
+      } else {
+        setUser(null); // Profile not found
       }
+    } else {
+      setUser(null); // No session
     }
-    return null;
+    setLoading(false);
   };
 
   useEffect(() => {
-    const initializeUser = async () => {
-      const userProfile = await fetchUserProfile();
-      setUser(userProfile);
-      setLoading(false);
-    };
-
-    initializeUser();
+    setLoading(true);
+    // Fetch initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      fetchAndSetUser(session);
+    });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event) => {
-        if (event === 'SIGNED_IN' || event === 'USER_UPDATED' || event === 'TOKEN_REFRESHED') {
-          initializeUser();
-        } else if (event === 'SIGNED_OUT') {
-          setUser(null);
-        }
+      (_event, session) => {
+        fetchAndSetUser(session);
       }
     );
 
@@ -110,8 +107,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const mutate = async () => {
-    const userProfile = await fetchUserProfile();
-    setUser(userProfile);
+    setLoading(true);
+    const { data: { session } } = await supabase.auth.getSession();
+    await fetchAndSetUser(session);
   };
 
   const value = {

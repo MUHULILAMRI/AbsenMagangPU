@@ -41,15 +41,17 @@ async function getRequestingUser(request: NextRequest) {
 
   if (authHeader) {
     const token = authHeader.replace('Bearer ', '')
-    const { data: { user }, error } = await supabase.auth.getUser(token)
-    if (error || !user) {
+    const { data, error } = await supabase.auth.getUser(token)
+    if (error || !data?.user) {
       return { user: null, supabase, error: "Invalid token" };
     }
-    sessionUser = user;
+    sessionUser = data.user;
   } else {
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session) return { user: null, supabase, error: "No session" }
-    sessionUser = session.user;
+    const { data, error } = await supabase.auth.getSession()
+    if (error || !data?.session) {
+      return { user: null, supabase, error: "No session" }
+    }
+    sessionUser = data.session.user;
   }
 
   if (!sessionUser) {
@@ -127,7 +129,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: `Database error: ${insertError.message}` }, { status: 500 });
     }
 
-    // --- Google Sheets Integration (DEBUG MODE) ---
+    // --- Google Sheets Integration (Fire-and-Forget) ---
+    // This operation is non-critical. We'll attempt to write to the sheet
+    // but won't block the response to the user or return an error if it fails.
+    // Errors will be logged on the server for debugging.
     try {
       const formattedTimestamp = new Date(timestamp).toLocaleString("id-ID", {
         dateStyle: "long",
@@ -145,15 +150,17 @@ export async function POST(request: NextRequest) {
         longitude,
       ];
       
-      const { appendToSheet } = await import("@/lib/google-sheets");
-      await appendToSheet(valuesToAppend);
-
-    } catch (sheetError: any) {
-      // Return a specific error response if sheet writing fails
-      return NextResponse.json({ 
-        error: "Absensi TERSIMPAN di database, tetapi GAGAL menulis ke Google Sheet. Detail:",
-        googleSheetError: sheetError,
-      }, { status: 500 });
+      // Fire-and-forget: import and run without awaiting the result.
+      // Attach a .catch to log any errors without affecting the main response.
+      import("@/lib/google-sheets")
+        .then(sheets => sheets.appendToSheet(valuesToAppend))
+        .catch(sheetError => {
+          console.error("BACKGROUND ERROR: Google Sheets append failed.", sheetError);
+        });
+    } catch (error) {
+      // This catch block is for any synchronous error that might happen
+      // *before* the promise chain starts (e.g., an issue with creating the values).
+      console.error("BACKGROUND ERROR: Could not initiate Google Sheets append.", error);
     }
     // --- End of Google Sheets Integration ---
 
