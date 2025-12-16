@@ -10,7 +10,7 @@ const _geistMono = Geist_Mono({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
   title: "Sistem Absensi Magang BPSDM PU",
-  description: "Aplikasi absensi dengan fitur monitoring, camera, dan geolocation",
+  description: "Aplikasi absensi dengan fitur monitoring, dan geolocation",
   generator: "MUH.ULIL AMRI, S.Kom, MTCNA",
   icons: {
     icon: "/pu.png",
