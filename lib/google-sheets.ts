@@ -22,6 +22,12 @@ async function getGoogleAuth() {
       throw new Error("Variabel lingkungan GOOGLE_APPLICATION_CREDENTIALS_JSON tidak diatur untuk lingkungan produksi.");
     }
     const credentials = JSON.parse(credentialsJson);
+
+    // Perbaikan penting: Pastikan format private_key benar
+    if (credentials.private_key) {
+      credentials.private_key = credentials.private_key.replace(/\\n/g, '\n');
+    }
+    
     return new google.auth.GoogleAuth({ credentials, scopes: SCOPES });
   } else {
     // Lingkungan Pengembangan (Lokal)
