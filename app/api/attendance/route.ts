@@ -29,7 +29,6 @@ async function getRequestingUser(request: NextRequest) {
     throw new Error("Missing Supabase URL or Anon Key.")
   }
 
-  const authHeader = request.headers.get('Authorization');
   const cookieStore = cookies()
   const supabase = createClient(supabaseUrl, anonKey, {
     cookies: {
@@ -37,22 +36,11 @@ async function getRequestingUser(request: NextRequest) {
     },
   })
 
-  let sessionUser;
-
-  if (authHeader) {
-    const token = authHeader.replace('Bearer ', '')
-    const { data, error } = await supabase.auth.getUser(token)
-    if (error || !data?.user) {
-      return { user: null, supabase, error: "Invalid token" };
-    }
-    sessionUser = data.user;
-  } else {
-    const { data, error } = await supabase.auth.getSession()
-    if (error || !data?.session) {
-      return { user: null, supabase, error: "No session" }
-    }
-    sessionUser = data.session.user;
+  const { data, error } = await supabase.auth.getSession()
+  if (error || !data?.session) {
+    return { user: null, supabase, error: "No session" }
   }
+  const sessionUser = data.session.user;
 
   if (!sessionUser) {
     return { user: null, supabase, error: "User not found" };

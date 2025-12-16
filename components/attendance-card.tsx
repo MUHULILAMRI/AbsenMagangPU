@@ -46,9 +46,7 @@ export default function AttendanceCard() {
         return
       }
 
-      const response = await fetch('/api/attendance', {
-        headers: { Authorization: `Bearer ${session.access_token}` },
-      })
+      const response = await fetch('/api/attendance')
 
       if (response.status === 404) {
         setTodayAttendance([])
@@ -111,7 +109,6 @@ export default function AttendanceCard() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${session.access_token}`,
         },
         body: JSON.stringify(attendanceData),
       })
